@@ -106,6 +106,7 @@ h3 {
 .palette,
 .inspector,
 .packet-tool,
+.persistence-controls,
 .topology-actions,
 .inspector section {
   display: flex;
@@ -122,6 +123,22 @@ h3 {
   color: #526071;
   font-size: 12px;
   font-weight: 700;
+}
+
+.persistence-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.persistence-controls textarea {
+  min-height: 80px;
+  resize: vertical;
+  border: 1px solid #c5cdd9;
+  border-radius: 6px;
+  padding: 8px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
 }
 
 .tool-list button {

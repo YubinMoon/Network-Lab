@@ -20,6 +20,16 @@ import {
 } from '../domain/types'
 import { create } from 'zustand'
 import { simulateIpv4Packet } from '../domain/simulation'
+import {
+  decodeTopologyHash,
+  encodeTopologyHash,
+  topologyFromJson,
+  topologyToJson,
+} from '../persistence/urlState'
+import {
+  loadTopologyFromLocalStorage,
+  saveTopologyToLocalStorage,
+} from '../persistence/localStorage'
 
 export type LabSelection =
   | { kind: 'node'; id: NodeId }
@@ -33,6 +43,8 @@ interface LabStoreState {
   simulationStatus: SimulationStatus
   currentEventIndex: number
   simulationSpeed: number
+  lastExportJson: string
+  lastShareUrl: string
   addNode: (type: NodeType) => void
   addLink: (sourceNodeId: NodeId, targetNodeId: NodeId) => void
   moveNode: (nodeId: NodeId, position: CanvasPosition) => void
@@ -51,6 +63,12 @@ interface LabStoreState {
   previousEvent: () => void
   resetSimulation: () => void
   setSimulationSpeed: (speed: number) => void
+  exportTopologyJson: () => void
+  importTopologyJson: (json: string) => void
+  saveTopology: () => void
+  loadTopology: () => void
+  createShareUrl: () => void
+  loadTopologyFromHash: (hash: string) => void
 }
 
 const emptyTopology = (): TopologyState => ({
@@ -67,6 +85,8 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   simulationStatus: 'idle',
   currentEventIndex: 0,
   simulationSpeed: 1,
+  lastExportJson: '',
+  lastShareUrl: '',
 
   addNode: (type) => {
     set((state) => {
@@ -322,6 +342,74 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
 
   setSimulationSpeed: (speed) => {
     set({ simulationSpeed: speed })
+  },
+
+  exportTopologyJson: () => {
+    set((state) => ({ lastExportJson: topologyToJson(state.topology) }))
+  },
+
+  importTopologyJson: (json) => {
+    if (!json.trim()) {
+      return
+    }
+
+    set({
+      topology: applyAutoConfiguration(topologyFromJson(json)),
+      selectedObject: null,
+      simulationTrace: null,
+      simulationStatus: 'idle',
+      currentEventIndex: 0,
+    })
+  },
+
+  saveTopology: () => {
+    saveTopologyToLocalStorage(get().topology)
+  },
+
+  loadTopology: () => {
+    const topology = loadTopologyFromLocalStorage()
+
+    if (!topology) {
+      return
+    }
+
+    set({
+      topology: applyAutoConfiguration(topology),
+      selectedObject: null,
+      simulationTrace: null,
+      simulationStatus: 'idle',
+      currentEventIndex: 0,
+    })
+  },
+
+  createShareUrl: () => {
+    const hash = encodeTopologyHash(get().topology)
+    const url =
+      typeof window === 'undefined'
+        ? hash
+        : `${window.location.origin}${window.location.pathname}${hash}`
+
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', hash)
+    }
+
+    set({ lastShareUrl: url })
+  },
+
+  loadTopologyFromHash: (hash) => {
+    const topology = decodeTopologyHash(hash)
+
+    if (!topology) {
+      return
+    }
+
+    set({
+      topology: applyAutoConfiguration(topology),
+      selectedObject: null,
+      simulationTrace: null,
+      simulationStatus: 'idle',
+      currentEventIndex: 0,
+    })
   },
 }))
 

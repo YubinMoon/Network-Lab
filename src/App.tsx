@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import '@xyflow/react/dist/style.css'
 import './App.css'
+import { PersistenceControls } from './components/common/PersistenceControls'
 import { NetworkCanvas } from './components/canvas/NetworkCanvas'
 import { Inspector } from './components/inspector/Inspector'
 import { PacketGenerator } from './components/simulation/PacketGenerator'
@@ -18,7 +20,12 @@ function App() {
   const loadFirstMilestoneTopology = useLabStore(
     (state) => state.loadFirstMilestoneTopology,
   )
+  const loadTopologyFromHash = useLabStore((state) => state.loadTopologyFromHash)
   const segmentCount = useLabStore((state) => state.topology.segments.length)
+
+  useEffect(() => {
+    loadTopologyFromHash(window.location.hash)
+  }, [loadTopologyFromHash])
 
   return (
     <main className="lab-shell">
@@ -56,6 +63,7 @@ function App() {
             </button>
           </div>
           <PacketGenerator />
+          <PersistenceControls />
         </aside>
 
         <section className="canvas" aria-label="Network Canvas">

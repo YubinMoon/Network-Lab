@@ -23,10 +23,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed Phase 8 deterministic IPv4 forwarding trace with host send decisions, router TTL decrement, route lookup, re-encapsulation, and packet drop reasons.
 - 2026-05-14: Completed Phase 9 ICMP Echo Request/Reply, Generic IPv4 Packet payloads, Packet Generator UI, and Event Log integration.
 - 2026-05-14: Completed Phase 10 simulation controls, Timeline, Event Log, Layer View, Packet Detail, Binary Match, and current packet token UI.
+- 2026-05-14: Completed Phase 11 JSON export/import, Local Storage save/load, compressed URL hash sharing, and persistence controls.
 
 ## In Progress
 
-- Phase 11: URL state and export/import.
+- Phase 12: Examples.
 
 ## Planned Work
 
@@ -116,10 +117,10 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ### Phase 11. URL State and Export/Import
 
-- [ ] Export topology JSON.
-- [ ] Import topology JSON.
-- [ ] Save and load topology from Local Storage.
-- [ ] Encode and decode share URLs with compressed state.
+- [x] Export topology JSON.
+- [x] Import topology JSON.
+- [x] Save and load topology from Local Storage.
+- [x] Encode and decode share URLs with compressed state.
 
 ### Phase 12. Examples
 
