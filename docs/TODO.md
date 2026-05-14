@@ -34,6 +34,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed fixed-height lab layout, internal Inspector/Palette scrolling, collapsible Simulation Panel, and visible current-packet canvas state.
 - 2026-05-14: Completed layout adjustment moving playback controls into the left sidebar, expanding the Event Log row, and making the Inspector span the full right column.
 - 2026-05-15: Completed follow-up keeping playback controls visible in the Palette after sending packets and widening the Event Log list indentation.
+- 2026-05-15: Completed dark application theme, icon-only Event Log panel toggle, fullscreen browser acceptance verification, and Export/Clear/Import JSON UI fix.
 
 ## In Progress
 

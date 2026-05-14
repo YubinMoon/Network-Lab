@@ -23,6 +23,7 @@ const tabs: SimulationTab[] = [
 export function SimulationPanel() {
   const [activeTab, setActiveTab] = useState<SimulationTab>('Event Log')
   const [collapsed, setCollapsed] = useState(false)
+  const toggleLabel = collapsed ? 'Expand Event Log' : 'Minimize Event Log'
 
   return (
     <section
@@ -32,11 +33,21 @@ export function SimulationPanel() {
       <div className="simulation-panel-header">
         <h2>Packet Trace</h2>
         <button
+          className="icon-button"
           type="button"
+          aria-label={toggleLabel}
+          title={toggleLabel}
           aria-expanded={!collapsed}
           onClick={() => setCollapsed((nextCollapsed) => !nextCollapsed)}
         >
-          {collapsed ? 'Expand Event Log' : 'Minimize Event Log'}
+          <svg
+            className="panel-toggle-icon"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d={collapsed ? 'M6 15L12 9L18 15' : 'M6 9L12 15L18 9'} />
+          </svg>
         </button>
       </div>
       {!collapsed ? (

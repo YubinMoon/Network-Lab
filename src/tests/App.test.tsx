@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, test } from 'vitest'
 import App from '../App'
 import { useLabStore } from '../store/useLabStore'
@@ -62,5 +62,28 @@ describe('App', () => {
     expect(screen.getAllByText(/delivered IPv4 Datagram/).length).toBeGreaterThan(
       0,
     )
+  })
+
+  test('imports the visible JSON after exporting a topology', async () => {
+    render(<App />)
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Load First Milestone' }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Export JSON' }))
+
+    await waitFor(() => {
+      const textArea = screen.getByLabelText('Import JSON') as HTMLTextAreaElement
+
+      expect(textArea.value).toContain('Host A')
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
+    expect(useLabStore.getState().topology.nodes).toHaveLength(0)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import JSON' }))
+
+    expect(useLabStore.getState().topology.nodes).toHaveLength(5)
+    expect(screen.getAllByText('Host A').length).toBeGreaterThan(0)
   })
 })
