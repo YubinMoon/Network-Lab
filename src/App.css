@@ -407,9 +407,14 @@ dd {
 }
 
 .palette .simulation-controls {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: stretch;
+  padding-block: 4px;
+  background: #ffffff;
 }
 
 .palette .simulation-controls button,
@@ -438,7 +443,7 @@ dd {
   gap: 6px;
   min-height: 0;
   margin: 0;
-  padding: 0 0 0 20px;
+  padding: 0 0 0 32px;
   overflow: auto;
   color: #394657;
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;

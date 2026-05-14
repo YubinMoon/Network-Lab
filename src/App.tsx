@@ -65,8 +65,8 @@ function App() {
             </button>
           </div>
           <ExampleMenu />
-          <PacketGenerator />
           <SimulationControls />
+          <PacketGenerator />
           <PersistenceControls />
         </aside>
 
