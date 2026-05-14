@@ -6,7 +6,7 @@ export function PacketToken() {
   const currentEventIndex = useLabStore((state) => state.currentEventIndex)
   const currentEvent = simulationTrace?.events[currentEventIndex]
 
-  if (!currentEvent || currentEvent.type === 'host-subnet-check') {
+  if (!currentEvent) {
     return null
   }
 
@@ -26,12 +26,24 @@ export function PacketToken() {
 }
 
 function packetLabel(eventType: string): string {
+  if (eventType === 'host-subnet-check') {
+    return 'Host Check'
+  }
+
   if (eventType === 'arp-request-sent') {
     return 'ARP Request'
   }
 
   if (eventType === 'arp-reply-sent') {
     return 'ARP Reply'
+  }
+
+  if (eventType.startsWith('switch-')) {
+    return 'Switching'
+  }
+
+  if (eventType.startsWith('router-')) {
+    return 'Routing'
   }
 
   if (eventType === 'packet-dropped') {

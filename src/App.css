@@ -1,7 +1,9 @@
 .lab-shell {
-  min-height: 100vh;
+  height: 100vh;
+  min-height: 0;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
   background: #f6f7f9;
   color: #18212f;
 }
@@ -70,12 +72,15 @@ input {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(180px, 240px) minmax(420px, 1fr) minmax(260px, 340px);
+  overflow: hidden;
 }
 
 .palette,
 .inspector {
   min-width: 0;
+  min-height: 0;
   padding: 16px;
+  overflow-y: auto;
   background: #ffffff;
 }
 
@@ -177,8 +182,9 @@ dd {
 
 .canvas {
   min-width: 0;
+  min-height: 0;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
   background:
     linear-gradient(#e8edf3 1px, transparent 1px),
     linear-gradient(90deg, #e8edf3 1px, transparent 1px),
@@ -187,7 +193,8 @@ dd {
 }
 
 .canvas .react-flow {
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
 }
 
 .canvas-toolbar {
@@ -216,6 +223,13 @@ dd {
 
 .network-node-card.selected {
   outline: 3px solid rgba(49, 95, 157, 0.28);
+}
+
+.network-node-card.active {
+  outline: 3px solid rgba(194, 105, 26, 0.42);
+  box-shadow:
+    0 0 0 5px rgba(194, 105, 26, 0.14),
+    0 10px 20px rgba(24, 33, 47, 0.08);
 }
 
 .network-node-card.host {
@@ -346,9 +360,36 @@ dd {
 .simulation-panel {
   display: grid;
   gap: 12px;
+  min-height: 0;
+  max-height: 34vh;
   padding: 14px 24px 18px;
   border-top: 1px solid #d8dde6;
+  overflow: hidden;
   background: #ffffff;
+}
+
+.simulation-panel.collapsed {
+  gap: 0;
+  padding-block: 10px;
+}
+
+.simulation-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.simulation-panel-content {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.simulation-panel-header .simulation-controls {
+  min-width: 0;
 }
 
 .simulation-controls span {
@@ -369,7 +410,7 @@ dd {
 .event-log {
   display: grid;
   gap: 6px;
-  max-height: 160px;
+  max-height: min(20vh, 180px);
   margin: 0;
   padding: 0 0 0 20px;
   overflow: auto;
@@ -409,7 +450,7 @@ dd {
 .binary-match {
   display: grid;
   gap: 10px;
-  max-height: 180px;
+  max-height: min(20vh, 180px);
   overflow: auto;
   text-align: left;
 }
@@ -470,6 +511,16 @@ dd {
 }
 
 @media (max-width: 980px) {
+  body {
+    overflow: auto;
+  }
+
+  .lab-shell {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
   .top-bar,
   .canvas-toolbar {
     align-items: flex-start;
@@ -478,15 +529,27 @@ dd {
 
   .workspace {
     grid-template-columns: 1fr;
+    overflow: visible;
   }
 
   .palette,
   .inspector {
+    max-height: none;
+    overflow: visible;
     border: 0;
     border-bottom: 1px solid #d8dde6;
   }
 
   .canvas {
     min-height: 420px;
+  }
+
+  .simulation-panel {
+    max-height: none;
+  }
+
+  .simulation-panel-header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

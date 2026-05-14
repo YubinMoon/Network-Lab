@@ -5,6 +5,7 @@ export interface LabNodeData extends Record<string, unknown> {
   label: string
   nodeType: NodeType
   interfaces: string[]
+  active: boolean
 }
 
 export interface LabEdgeData extends Record<string, unknown> {

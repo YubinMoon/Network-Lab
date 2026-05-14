@@ -55,6 +55,7 @@ export function NetworkCanvas() {
         data: {
           label: node.name,
           nodeType: node.type,
+          active: currentEvent?.actorNodeId === node.id,
           interfaces: node.interfaces.map(
             (networkInterface) =>
               networkInterface.ipAddress && networkInterface.prefixLength
@@ -63,7 +64,7 @@ export function NetworkCanvas() {
           ),
         },
       })),
-    [selectedObject, topology.nodes],
+    [currentEvent, selectedObject, topology.nodes],
   )
   const flowEdges = useMemo<LabFlowEdge[]>(
     () =>

@@ -23,27 +23,44 @@ const tabs: SimulationTab[] = [
 
 export function SimulationPanel() {
   const [activeTab, setActiveTab] = useState<SimulationTab>('Event Log')
+  const [collapsed, setCollapsed] = useState(false)
 
   return (
-    <section className="simulation-panel" aria-label="Simulation Panel">
-      <SimulationControls />
-      <div className="simulation-tabs">
-        {tabs.map((tab) => (
-          <button
-            className={tab === activeTab ? 'active-tab' : undefined}
-            type="button"
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-          </button>
-        ))}
+    <section
+      className={collapsed ? 'simulation-panel collapsed' : 'simulation-panel'}
+      aria-label="Simulation Panel"
+    >
+      <div className="simulation-panel-header">
+        <SimulationControls />
+        <button
+          type="button"
+          aria-expanded={!collapsed}
+          onClick={() => setCollapsed((nextCollapsed) => !nextCollapsed)}
+        >
+          {collapsed ? 'Expand Event Log' : 'Minimize Event Log'}
+        </button>
       </div>
-      {activeTab === 'Timeline' ? <Timeline /> : null}
-      {activeTab === 'Event Log' ? <EventLog /> : null}
-      {activeTab === 'Layer View' ? <LayerView /> : null}
-      {activeTab === 'Packet Detail' ? <PacketDetail /> : null}
-      {activeTab === 'Binary Match' ? <BinaryMatchView /> : null}
+      {!collapsed ? (
+        <div className="simulation-panel-content">
+          <div className="simulation-tabs">
+            {tabs.map((tab) => (
+              <button
+                className={tab === activeTab ? 'active-tab' : undefined}
+                type="button"
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+          {activeTab === 'Timeline' ? <Timeline /> : null}
+          {activeTab === 'Event Log' ? <EventLog /> : null}
+          {activeTab === 'Layer View' ? <LayerView /> : null}
+          {activeTab === 'Packet Detail' ? <PacketDetail /> : null}
+          {activeTab === 'Binary Match' ? <BinaryMatchView /> : null}
+        </div>
+      ) : null}
     </section>
   )
 }

@@ -13,7 +13,11 @@ export function NetworkNodeCard({
   variant,
 }: NetworkNodeCardProps) {
   return (
-    <div className={`network-node-card ${variant} ${selected ? 'selected' : ''}`}>
+    <div
+      className={`network-node-card ${variant} ${selected ? 'selected' : ''} ${
+        data.active ? 'active' : ''
+      }`}
+    >
       <Handle type="target" position={Position.Left} />
       <div className="node-title">{data.label}</div>
       <div className="node-kind">{nodeLabel(data.nodeType)}</div>
