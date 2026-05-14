@@ -15,10 +15,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed Phase 0 project bootstrap with Vite, React, TypeScript strict mode, Vitest, baseline folders, and passing test/build checks.
 - 2026-05-14: Completed Phase 1 domain data model plus IPv4, MAC, and validation utilities with unit tests.
 - 2026-05-14: Completed Phase 2 topology store and React Flow editor with Host, Switch, Router, Link, selection, deletion, and Inspector support.
+- 2026-05-14: Completed Phase 3 Network Segment detection with interface graph components, LAN/point-to-point classification, segment identity preservation, and Inspector visibility.
 
 ## In Progress
 
-- Phase 3: Network Segment detection.
+- Phase 4: Auto IP/MAC/Gateway assignment.
 
 ## Planned Work
 
@@ -50,10 +51,10 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ### Phase 3. Network Segment Detection
 
-- [ ] Implement interface graph helpers.
-- [ ] Implement `Network Segment` detection.
-- [ ] Preserve segment identity when possible after edits.
-- [ ] Add segment detection tests.
+- [x] Implement interface graph helpers.
+- [x] Implement `Network Segment` detection.
+- [x] Preserve segment identity when possible after edits.
+- [x] Add segment detection tests.
 
 ### Phase 4. Auto IP/MAC/Gateway Assignment
 

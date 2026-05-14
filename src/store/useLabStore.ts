@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid'
 import { generateMac } from '../domain/mac'
+import { applyNetworkSegments } from '../domain/segments'
 import {
   DEFAULT_LAB_SETTINGS,
   type CanvasPosition,
@@ -53,10 +54,10 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       const node = createNode(type, state.topology.nodes)
 
       return {
-        topology: {
+        topology: applyNetworkSegments({
           ...state.topology,
           nodes: [...state.topology.nodes, node],
-        },
+        }),
         selectedObject: { kind: 'node', id: node.id },
       }
     })
@@ -106,7 +107,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       }
 
       return {
-        topology: {
+        topology: applyNetworkSegments({
           ...state.topology,
           nodes: state.topology.nodes.map((node) => {
             if (node.id === sourceNodeId) {
@@ -120,7 +121,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
             return node
           }),
           links: [...state.topology.links, link],
-        },
+        }),
         selectedObject: { kind: 'link', id: link.id },
       }
     })
@@ -148,7 +149,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       const removedLinkSet = new Set(removedLinkIds)
 
       return {
-        topology: {
+        topology: applyNetworkSegments({
           ...state.topology,
           nodes: state.topology.nodes
             .filter((node) => node.id !== nodeId)
@@ -156,7 +157,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
           links: state.topology.links.filter(
             (link) => !removedLinkSet.has(link.id),
           ),
-        },
+        }),
         selectedObject: null,
       }
     })
@@ -164,13 +165,13 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
 
   removeLink: (linkId) => {
     set((state) => ({
-      topology: {
+      topology: applyNetworkSegments({
         ...state.topology,
         nodes: state.topology.nodes.map((node) =>
           detachLinksFromNode(node, new Set([linkId])),
         ),
         links: state.topology.links.filter((link) => link.id !== linkId),
-      },
+      }),
       selectedObject: null,
     }))
   },
@@ -206,7 +207,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
 
   loadFirstMilestoneTopology: () => {
     set({
-      topology: createFirstMilestoneTopology(),
+      topology: applyNetworkSegments(createFirstMilestoneTopology()),
       selectedObject: null,
     })
   },

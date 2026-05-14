@@ -27,6 +27,7 @@ function App() {
   const defaultTtl = useLabStore(
     (state) => state.topology.settings.defaultTtl,
   )
+  const segmentCount = useLabStore((state) => state.topology.segments.length)
 
   return (
     <main className="lab-shell">
@@ -80,7 +81,7 @@ function App() {
 
         <section className="canvas" aria-label="Network Canvas">
           <div className="canvas-toolbar">
-            <span>Network Segment</span>
+            <span>Network Segment: {segmentCount}</span>
             <span>Auto Configuration: On</span>
           </div>
           <NetworkCanvas />

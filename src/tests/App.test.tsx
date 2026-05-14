@@ -45,5 +45,6 @@ describe('App', () => {
     expect(screen.getByText('Router R1')).toBeInTheDocument()
     expect(screen.getByText('Host B')).toBeInTheDocument()
     expect(useLabStore.getState().topology.links).toHaveLength(4)
+    expect(useLabStore.getState().topology.segments).toHaveLength(2)
   })
 })

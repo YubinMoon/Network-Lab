@@ -22,12 +22,56 @@ export function Inspector() {
       {selectedLink ? (
         <LinkInspector link={selectedLink} nodes={topology.nodes} />
       ) : null}
+      <SegmentSummary segments={topology.segments} />
       {selectedObject ? (
         <button type="button" className="danger-button" onClick={deleteSelection}>
           Delete Selection
         </button>
       ) : null}
     </aside>
+  )
+}
+
+function SegmentSummary({
+  segments,
+}: {
+  segments: Array<{
+    id: string
+    name: string
+    type: string
+    networkAddress: string
+    prefixLength: number
+    memberInterfaceIds: string[]
+  }>
+}) {
+  return (
+    <section>
+      <h3>Network Segment</h3>
+      {segments.length === 0 ? (
+        <p>0 segments</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>CIDR</th>
+              <th>Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            {segments.map((segment) => (
+              <tr key={segment.id}>
+                <td>{segment.name}</td>
+                <td>
+                  {segment.networkAddress}/{segment.prefixLength}
+                </td>
+                <td>{segment.type}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
   )
 }
 
