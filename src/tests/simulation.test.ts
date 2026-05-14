@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'vitest'
 import { applyAutoConfiguration } from '../domain/autoConfig'
-import { simulateIpv4Packet } from '../domain/simulation'
+import { applySimulationTraceToTopology } from '../domain/dynamicTables'
+import {
+  simulateIpv4Packet,
+  simulateIpv4PacketBatch,
+} from '../domain/simulation'
 import {
   DEFAULT_LAB_SETTINGS,
   type EthernetFrame,
@@ -51,6 +55,39 @@ describe('IPv4 forwarding simulation', () => {
         ttl: 63,
       }),
     )
+  })
+
+  test('records ARP reply, ARP cache update, and switch MAC learning events', () => {
+    const topology = applyAutoConfiguration(firstMilestoneTopology())
+    const trace = simulateIpv4Packet(topology, {
+      sourceHostId: 'host-a',
+      destinationIp: '10.0.2.10',
+      ttl: 64,
+      payload: 'Hello',
+    })
+    const nextTopology = applySimulationTraceToTopology(topology, trace)
+    const hostA = nextTopology.nodes.find(
+      (node): node is HostNode => node.id === 'host-a' && node.type === 'host',
+    )
+    const switchS1 = nextTopology.nodes.find(
+      (node): node is SwitchNode =>
+        node.id === 'switch-s1' && node.type === 'switch',
+    )
+
+    expect(trace.events.some((event) => event.type === 'arp-reply-sent')).toBe(
+      true,
+    )
+    expect(
+      trace.events.some((event) => event.type === 'arp-cache-updated'),
+    ).toBe(true)
+    expect(
+      trace.events.some((event) => event.type === 'switch-source-mac-learned'),
+    ).toBe(true)
+    expect(
+      trace.events.some((event) => event.type === 'switch-broadcast-flooded'),
+    ).toBe(true)
+    expect(hostA?.arpCache).toHaveLength(1)
+    expect(switchS1?.macAddressTable.length).toBeGreaterThan(0)
   })
 
   test('drops external host traffic with no Default Gateway', () => {
@@ -109,6 +146,53 @@ describe('IPv4 forwarding simulation', () => {
     expect(eventByType(trace.events, 'packet-dropped').details).toEqual({
       reason: 'TTL Expired',
     })
+  })
+
+  test('drops on a fully lossy link in the selected Layer 2 path', () => {
+    const topology = applyAutoConfiguration({
+      ...firstMilestoneTopology(),
+      links: firstMilestoneTopology().links.map((networkLink) =>
+        networkLink.id === 'link-3'
+          ? { ...networkLink, lossRate: 1 }
+          : networkLink,
+      ),
+    })
+    const trace = simulateIpv4Packet(topology, {
+      sourceHostId: 'host-a',
+      destinationIp: '10.0.2.10',
+      ttl: 64,
+      packetType: 'generic-ipv4',
+    })
+
+    expect(trace.result).toEqual({
+      status: 'dropped',
+      reason: 'Link Loss',
+    })
+  })
+
+  test('can produce a deterministic trace for multiple datagrams', () => {
+    const topology = applyAutoConfiguration(firstMilestoneTopology())
+    const trace = simulateIpv4PacketBatch(topology, {
+      sourceHostId: 'host-a',
+      destinationIp: '10.0.2.10',
+      ttl: 64,
+      packetType: 'generic-ipv4',
+      packetCount: 3,
+    })
+    const deliveredEvents = trace.events.filter(
+      (event) => event.type === 'packet-delivered',
+    )
+    const packetIds = new Set(
+      trace.events
+        .map((event) => event.packetId)
+        .filter((packetId): packetId is string => Boolean(packetId)),
+    )
+
+    expect(trace.result.status).toBe('delivered')
+    expect(deliveredEvents).toHaveLength(3)
+    expect(packetIds.has('packet-1')).toBe(true)
+    expect(packetIds.has('packet-2')).toBe(true)
+    expect(packetIds.has('packet-3')).toBe(true)
   })
 })
 

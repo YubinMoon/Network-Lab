@@ -16,6 +16,7 @@ export function PacketGenerator() {
   const [destinationIp, setDestinationIp] = useState('')
   const [packetType, setPacketType] = useState<PacketType>('icmp-echo')
   const [ttl, setTtl] = useState(topology.settings.defaultTtl)
+  const [packetCount, setPacketCount] = useState(1)
   const [payload, setPayload] = useState('Hello')
   const selectedSourceHostId = hosts.some((host) => host.id === sourceHostId)
     ? sourceHostId
@@ -42,7 +43,7 @@ export function PacketGenerator() {
           destinationIp,
           packetType,
           ttl,
-          packetCount: 1,
+          packetCount,
           intervalMs: topology.settings.defaultPacketIntervalMs,
           payload,
         })
@@ -114,6 +115,15 @@ export function PacketGenerator() {
           min={1}
           value={ttl}
           onChange={(event) => setTtl(Number(event.target.value))}
+        />
+      </label>
+      <label>
+        <span>Packet Count</span>
+        <input
+          type="number"
+          min={1}
+          value={packetCount}
+          onChange={(event) => setPacketCount(Number(event.target.value))}
         />
       </label>
       <label>

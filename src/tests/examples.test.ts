@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { applyAutoConfiguration } from '../domain/autoConfig'
-import { simulateIpv4Packet } from '../domain/simulation'
+import { simulateIpv4PacketBatch } from '../domain/simulation'
 import { EXAMPLE_TOPOLOGIES } from '../examples/topologies'
 
 const requiredExampleNames = [
@@ -35,12 +35,14 @@ describe('Example topologies', () => {
 
       expect(destinationIp, example.name).toBeTruthy()
 
-      const trace = simulateIpv4Packet(topology, {
+      const trace = simulateIpv4PacketBatch(topology, {
         sourceHostId: example.packet.sourceHostId,
         destinationIp: destinationIp ?? '0.0.0.0',
         ttl: example.packet.ttl,
         packetType: example.packet.packetType,
         payload: example.packet.payload,
+        packetCount: example.packet.packetCount,
+        intervalMs: example.packet.intervalMs,
       })
 
       expect(trace.events.length, example.name).toBeGreaterThan(0)

@@ -8,8 +8,18 @@ export function Inspector() {
   const simulationTrace = useLabStore((state) => state.simulationTrace)
   const currentEventIndex = useLabStore((state) => state.currentEventIndex)
   const deleteSelection = useLabStore((state) => state.deleteSelection)
-  const selectedRoute = simulationTrace?.events[currentEventIndex]?.details
-    ?.selectedRoute as { id: string } | undefined
+  const currentEvent = simulationTrace?.events[currentEventIndex]
+  const selectedRoute = currentEvent?.details?.selectedRoute as
+    | { id: string }
+    | undefined
+  const selectedArpIpAddress =
+    currentEvent?.type === 'arp-cache-updated'
+      ? stringDetail(currentEvent.details, 'ipAddress')
+      : undefined
+  const selectedMacAddress =
+    currentEvent?.type === 'switch-source-mac-learned'
+      ? stringDetail(currentEvent.details, 'macAddress')
+      : undefined
   const selectedNode =
     selectedObject?.kind === 'node'
       ? topology.nodes.find((node) => node.id === selectedObject.id)
@@ -25,7 +35,20 @@ export function Inspector() {
       <ValidationPanel />
       {!selectedNode && !selectedLink ? <EmptySelection /> : null}
       {selectedNode ? (
-        <NodeInspector node={selectedNode} selectedRouteId={selectedRoute?.id} />
+        <NodeInspector
+          node={selectedNode}
+          selectedRouteId={selectedRoute?.id}
+          selectedArpIpAddress={
+            currentEvent?.actorNodeId === selectedNode.id
+              ? selectedArpIpAddress
+              : undefined
+          }
+          selectedMacAddress={
+            currentEvent?.actorNodeId === selectedNode.id
+              ? selectedMacAddress
+              : undefined
+          }
+        />
       ) : null}
       {selectedLink ? (
         <LinkInspector link={selectedLink} nodes={topology.nodes} />
@@ -95,9 +118,13 @@ function EmptySelection() {
 function NodeInspector({
   node,
   selectedRouteId,
+  selectedArpIpAddress,
+  selectedMacAddress,
 }: {
   node: NetworkNode
   selectedRouteId?: string
+  selectedArpIpAddress?: string
+  selectedMacAddress?: string
 }) {
   return (
     <>
@@ -127,7 +154,10 @@ function NodeInspector({
       {node.type === 'host' ? (
         <section>
           <h3>ARP Cache</h3>
-          <ArpCacheTable arpCache={node.arpCache} />
+          <ArpCacheTable
+            arpCache={node.arpCache}
+            selectedIpAddress={selectedArpIpAddress}
+          />
         </section>
       ) : null}
       {node.type === 'switch' ? (
@@ -146,7 +176,14 @@ function NodeInspector({
               </thead>
               <tbody>
                 {node.macAddressTable.map((entry) => (
-                  <tr key={entry.macAddress}>
+                  <tr
+                    className={
+                      entry.macAddress === selectedMacAddress
+                        ? 'highlight-row'
+                        : undefined
+                    }
+                    key={entry.macAddress}
+                  >
                     <td>{entry.macAddress}</td>
                     <td>{entry.portInterfaceId}</td>
                     <td>{entry.ageSeconds}s</td>
@@ -160,7 +197,10 @@ function NodeInspector({
       {node.type === 'router' ? (
         <section>
           <h3>ARP Cache</h3>
-          <ArpCacheTable arpCache={node.arpCache} />
+          <ArpCacheTable
+            arpCache={node.arpCache}
+            selectedIpAddress={selectedArpIpAddress}
+          />
         </section>
       ) : null}
       {node.type === 'router' ? (
@@ -205,6 +245,7 @@ function NodeInspector({
 
 function ArpCacheTable({
   arpCache,
+  selectedIpAddress,
 }: {
   arpCache: Array<{
     ipAddress: string
@@ -212,6 +253,7 @@ function ArpCacheTable({
     interfaceId: string
     ageSeconds: number
   }>
+  selectedIpAddress?: string
 }) {
   if (arpCache.length === 0) {
     return <p>0 entries</p>
@@ -228,7 +270,12 @@ function ArpCacheTable({
       </thead>
       <tbody>
         {arpCache.map((entry) => (
-          <tr key={`${entry.interfaceId}-${entry.ipAddress}`}>
+          <tr
+            className={
+              entry.ipAddress === selectedIpAddress ? 'highlight-row' : undefined
+            }
+            key={`${entry.interfaceId}-${entry.ipAddress}`}
+          >
             <td>{entry.ipAddress}</td>
             <td>{entry.macAddress}</td>
             <td>{entry.interfaceId}</td>
@@ -341,4 +388,13 @@ function nodeTypeLabel(type: string): string {
 
 function endpointName(nodeId: string, nodes: NetworkNode[]): string {
   return nodes.find((node) => node.id === nodeId)?.name ?? nodeId
+}
+
+function stringDetail(
+  details: Record<string, unknown> | undefined,
+  key: string,
+): string | undefined {
+  const value = details?.[key]
+
+  return typeof value === 'string' ? value : undefined
 }

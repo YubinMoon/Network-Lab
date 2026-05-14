@@ -19,7 +19,8 @@ import {
   type TopologyState,
 } from '../domain/types'
 import { create } from 'zustand'
-import { simulateIpv4Packet } from '../domain/simulation'
+import { applySimulationTraceToTopology } from '../domain/dynamicTables'
+import { simulateIpv4PacketBatch } from '../domain/simulation'
 import {
   decodeTopologyHash,
   encodeTopologyHash,
@@ -314,15 +315,18 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       return
     }
 
-    const simulationTrace = simulateIpv4Packet(topology, {
-        sourceHostId: input.sourceHostId,
-        destinationIp,
-        ttl: input.ttl,
-        packetType: input.packetType,
-        payload: input.payload,
-      })
+    const simulationTrace = simulateIpv4PacketBatch(topology, {
+      sourceHostId: input.sourceHostId,
+      destinationIp,
+      ttl: input.ttl,
+      packetType: input.packetType,
+      payload: input.payload,
+      packetCount: input.packetCount,
+      intervalMs: input.intervalMs,
+    })
 
     set({
+      topology: applySimulationTraceToTopology(topology, simulationTrace),
       simulationTrace,
       simulationStatus:
         simulationTrace.events.length > 0 ? 'paused' : 'completed',
@@ -450,17 +454,21 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
         ? hostIpAddress(topology, example.packet.targetHostId)
         : example.packet.destinationIp
     const simulationTrace = destinationIp
-      ? simulateIpv4Packet(topology, {
+      ? simulateIpv4PacketBatch(topology, {
           sourceHostId: example.packet.sourceHostId,
           destinationIp,
           ttl: example.packet.ttl,
           packetType: example.packet.packetType,
           payload: example.packet.payload,
+          packetCount: example.packet.packetCount,
+          intervalMs: example.packet.intervalMs,
         })
       : null
 
     set({
-      topology,
+      topology: simulationTrace
+        ? applySimulationTraceToTopology(topology, simulationTrace)
+        : topology,
       selectedObject: null,
       simulationTrace,
       simulationStatus: simulationTrace ? 'paused' : 'idle',
