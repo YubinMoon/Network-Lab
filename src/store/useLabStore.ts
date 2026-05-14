@@ -11,11 +11,14 @@ import {
   type NetworkNode,
   type NodeId,
   type NodeType,
+  type PacketGeneratorInput,
+  type PacketTrace,
   type RouterNode,
   type SwitchNode,
   type TopologyState,
 } from '../domain/types'
 import { create } from 'zustand'
+import { simulateIpv4Packet } from '../domain/simulation'
 
 export type LabSelection =
   | { kind: 'node'; id: NodeId }
@@ -25,6 +28,7 @@ export type LabSelection =
 interface LabStoreState {
   topology: TopologyState
   selectedObject: LabSelection
+  simulationTrace: PacketTrace | null
   addNode: (type: NodeType) => void
   addLink: (sourceNodeId: NodeId, targetNodeId: NodeId) => void
   moveNode: (nodeId: NodeId, position: CanvasPosition) => void
@@ -36,6 +40,7 @@ interface LabStoreState {
   clearSelection: () => void
   clearTopology: () => void
   loadFirstMilestoneTopology: () => void
+  sendPacket: (input: PacketGeneratorInput) => void
 }
 
 const emptyTopology = (): TopologyState => ({
@@ -48,6 +53,7 @@ const emptyTopology = (): TopologyState => ({
 export const useLabStore = create<LabStoreState>((set, get) => ({
   topology: emptyTopology(),
   selectedObject: null,
+  simulationTrace: null,
 
   addNode: (type) => {
     set((state) => {
@@ -59,6 +65,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
           nodes: [...state.topology.nodes, node],
         }),
         selectedObject: { kind: 'node', id: node.id },
+        simulationTrace: null,
       }
     })
   },
@@ -123,6 +130,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
           links: [...state.topology.links, link],
         }),
         selectedObject: { kind: 'link', id: link.id },
+        simulationTrace: null,
       }
     })
   },
@@ -159,6 +167,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
           ),
         }),
         selectedObject: null,
+        simulationTrace: null,
       }
     })
   },
@@ -173,6 +182,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
         links: state.topology.links.filter((link) => link.id !== linkId),
       }),
       selectedObject: null,
+      simulationTrace: null,
     }))
   },
 
@@ -202,13 +212,36 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   },
 
   clearTopology: () => {
-    set({ topology: emptyTopology(), selectedObject: null })
+    set({ topology: emptyTopology(), selectedObject: null, simulationTrace: null })
   },
 
   loadFirstMilestoneTopology: () => {
     set({
       topology: applyAutoConfiguration(createFirstMilestoneTopology()),
       selectedObject: null,
+      simulationTrace: null,
+    })
+  },
+
+  sendPacket: (input) => {
+    const topology = get().topology
+    const destinationIp =
+      input.destinationMode === 'host'
+        ? hostIpAddress(topology, input.targetHostId)
+        : input.destinationIp
+
+    if (!destinationIp) {
+      return
+    }
+
+    set({
+      simulationTrace: simulateIpv4Packet(topology, {
+        sourceHostId: input.sourceHostId,
+        destinationIp,
+        ttl: input.ttl,
+        packetType: input.packetType,
+        payload: input.payload,
+      }),
     })
   },
 }))
@@ -419,4 +452,15 @@ function addTopologyLink(
     delayMs: 100,
     lossRate: 0,
   })
+}
+
+function hostIpAddress(
+  topology: TopologyState,
+  hostId: NodeId | undefined,
+): string | undefined {
+  const host = topology.nodes.find(
+    (node): node is HostNode => node.type === 'host' && node.id === hostId,
+  )
+
+  return host?.interfaces[0]?.ipAddress
 }

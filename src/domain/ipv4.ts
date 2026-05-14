@@ -24,12 +24,14 @@ export function createIpv4Datagram({
   srcIp,
   dstIp,
   ttl,
+  protocol,
   payload,
 }: {
   id: string
   srcIp: string
   dstIp: string
   ttl: number
+  protocol: IPv4Datagram['protocol']
   payload: IPv4Datagram['payload']
 }): IPv4Datagram {
   return {
@@ -37,7 +39,7 @@ export function createIpv4Datagram({
     srcIp,
     dstIp,
     ttl,
-    protocol: 'RAW',
+    protocol,
     payload,
   }
 }

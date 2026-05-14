@@ -1,5 +1,10 @@
 import { selectHostArpTarget } from './arp'
 import {
+  createIcmpEchoReply,
+  createIcmpEchoRequest,
+  isIcmpEchoRequest,
+} from './icmp'
+import {
   createIpv4Datagram,
   createIpv4Frame,
   forwardIpv4FrameAtRouter,
@@ -12,6 +17,7 @@ import type {
   NetworkNode,
   PacketDropReason,
   PacketTrace,
+  PacketType,
   RouterNode,
   SimulationEvent,
   TopologyState,
@@ -21,6 +27,7 @@ export interface Ipv4SimulationInput {
   sourceHostId: string
   destinationIp: string
   ttl: number
+  packetType?: PacketType
   payload?: string
 }
 
@@ -33,8 +40,24 @@ export function simulateIpv4Packet(
   topology: TopologyState,
   input: Ipv4SimulationInput,
 ): PacketTrace {
+  return simulateIpv4PacketInternal(topology, input, {
+    packetId: 'packet-1',
+    allowIcmpReply: true,
+    icmpReply: false,
+  })
+}
+
+function simulateIpv4PacketInternal(
+  topology: TopologyState,
+  input: Ipv4SimulationInput,
+  options: {
+    packetId: string
+    allowIcmpReply: boolean
+    icmpReply: boolean
+  },
+): PacketTrace {
   const eventBuilder = createEventBuilder()
-  const packetId = 'packet-1'
+  const packetId = options.packetId
   const sourceHost = topology.nodes.find(
     (node): node is HostNode =>
       node.type === 'host' && node.id === input.sourceHostId,
@@ -55,7 +78,13 @@ export function simulateIpv4Packet(
     srcIp: sourceInterface.ipAddress,
     dstIp: input.destinationIp,
     ttl: input.ttl,
-    payload: { data: input.payload ?? '' },
+    protocol: input.packetType === 'icmp-echo' ? 'ICMP' : 'RAW',
+    payload:
+      input.packetType === 'icmp-echo'
+        ? options.icmpReply
+          ? createIcmpEchoReply(createIcmpEchoRequest({ data: input.payload }))
+          : createIcmpEchoRequest({ data: input.payload })
+        : { data: input.payload ?? '' },
   })
   eventBuilder.add('host-subnet-check', sourceHost.id, {
     description: `${sourceHost.name} checked destination network.`,
@@ -117,7 +146,15 @@ export function simulateIpv4Packet(
       packetId,
       details: { datagram },
     })
-    return trace(packetId, input, eventBuilder.events, { status: 'delivered' })
+    return maybeReplyToIcmpEcho(
+      topology,
+      input,
+      packetId,
+      datagram,
+      nextHopInterface.node,
+      eventBuilder.events,
+      options,
+    )
   }
 
   if (nextHopInterface.node.type !== 'router') {
@@ -137,6 +174,7 @@ export function simulateIpv4Packet(
     nextHopInterface.node,
     nextHopInterface.networkInterface,
     eventBuilder,
+    options,
   )
 }
 
@@ -149,6 +187,11 @@ function forwardThroughRouters(
   firstRouter: RouterNode,
   firstRouterInterface: NetworkInterface,
   eventBuilder: ReturnType<typeof createEventBuilder>,
+  options: {
+    packetId: string
+    allowIcmpReply: boolean
+    icmpReply: boolean
+  },
 ): PacketTrace {
   let currentRouter = firstRouter
   let ingressInterface = firstRouterInterface
@@ -200,7 +243,15 @@ function forwardThroughRouters(
           ethernetFrame: routerResult.frame,
         },
       })
-      return trace(packetId, input, eventBuilder.events, { status: 'delivered' })
+      return maybeReplyToIcmpEcho(
+        topology,
+        input,
+        packetId,
+        routerResult.datagram ?? initialDatagram,
+        destinationInterface.node,
+        eventBuilder.events,
+        options,
+      )
     }
 
     const nextHopInterface = routerResult.nextHopIp
@@ -349,12 +400,65 @@ function trace(
 ): PacketTrace {
   return {
     packetId,
-    packetType: 'generic-ipv4',
+    packetType: input.packetType ?? 'generic-ipv4',
     sourceHostId: input.sourceHostId,
     destinationIp: input.destinationIp,
     result,
     events,
   }
+}
+
+function maybeReplyToIcmpEcho(
+  topology: TopologyState,
+  input: Ipv4SimulationInput,
+  packetId: string,
+  datagram: IPv4Datagram,
+  destinationNode: NetworkNode,
+  requestEvents: SimulationEvent[],
+  options: {
+    packetId: string
+    allowIcmpReply: boolean
+    icmpReply: boolean
+  },
+): PacketTrace {
+  if (
+    input.packetType !== 'icmp-echo' ||
+    options.icmpReply ||
+    !options.allowIcmpReply ||
+    destinationNode.type !== 'host' ||
+    !isIcmpEchoRequest(datagram)
+  ) {
+    return trace(packetId, input, requestEvents, { status: 'delivered' })
+  }
+
+  const replyTrace = simulateIpv4PacketInternal(
+    topology,
+    {
+      sourceHostId: destinationNode.id,
+      destinationIp: datagram.srcIp,
+      ttl: topology.settings.defaultTtl,
+      packetType: 'icmp-echo',
+      payload:
+        'data' in datagram.payload && typeof datagram.payload.data === 'string'
+          ? datagram.payload.data
+          : '',
+    },
+    {
+      packetId: 'packet-2',
+      allowIcmpReply: false,
+      icmpReply: true,
+    },
+  )
+  const events = [
+    ...requestEvents,
+    ...replyTrace.events.map((event, index) => ({
+      ...event,
+      id: `event-${requestEvents.length + index + 1}`,
+      timeMs: requestEvents.length + index,
+    })),
+  ]
+
+  return trace(packetId, input, events, replyTrace.result)
 }
 
 function createEventBuilder() {

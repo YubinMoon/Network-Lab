@@ -2,6 +2,7 @@ import '@xyflow/react/dist/style.css'
 import './App.css'
 import { NetworkCanvas } from './components/canvas/NetworkCanvas'
 import { Inspector } from './components/inspector/Inspector'
+import { PacketGenerator } from './components/simulation/PacketGenerator'
 import { useLabStore } from './store/useLabStore'
 import type { NodeType } from './domain/types'
 
@@ -24,10 +25,8 @@ function App() {
   const loadFirstMilestoneTopology = useLabStore(
     (state) => state.loadFirstMilestoneTopology,
   )
-  const defaultTtl = useLabStore(
-    (state) => state.topology.settings.defaultTtl,
-  )
   const segmentCount = useLabStore((state) => state.topology.segments.length)
+  const simulationTrace = useLabStore((state) => state.simulationTrace)
 
   return (
     <main className="lab-shell">
@@ -64,19 +63,7 @@ function App() {
               Clear
             </button>
           </div>
-          <div className="packet-tool">
-            <h2>Packet Generator</h2>
-            <dl>
-              <div>
-                <dt>Packet Type</dt>
-                <dd>ICMP Echo Request</dd>
-              </div>
-              <div>
-                <dt>TTL</dt>
-                <dd>{defaultTtl}</dd>
-              </div>
-            </dl>
-          </div>
+          <PacketGenerator />
         </aside>
 
         <section className="canvas" aria-label="Network Canvas">
@@ -106,7 +93,13 @@ function App() {
           ))}
         </div>
         <ol className="event-log" aria-label="Event Log">
-          <li>Simulation idle.</li>
+          {simulationTrace ? (
+            simulationTrace.events.map((event) => (
+              <li key={event.id}>{event.description}</li>
+            ))
+          ) : (
+            <li>Simulation idle.</li>
+          )}
         </ol>
       </section>
     </main>

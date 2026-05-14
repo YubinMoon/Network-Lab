@@ -21,10 +21,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed Phase 6 Layer 2 switch MAC learning, broadcast flooding, unknown unicast flooding, known unicast forwarding, and MAC Address Table display.
 - 2026-05-14: Completed Phase 7 ARP target selection, ARP request/reply frame helpers, ARP cache updates, and ARP Cache Inspector tables.
 - 2026-05-14: Completed Phase 8 deterministic IPv4 forwarding trace with host send decisions, router TTL decrement, route lookup, re-encapsulation, and packet drop reasons.
+- 2026-05-14: Completed Phase 9 ICMP Echo Request/Reply, Generic IPv4 Packet payloads, Packet Generator UI, and Event Log integration.
 
 ## In Progress
 
-- Phase 9: ICMP Echo and Generic IPv4 packets.
+- Phase 10: Animation and simulation panels.
 
 ## Planned Work
 
@@ -100,10 +101,10 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ### Phase 9. ICMP Echo and Generic IPv4 Packets
 
-- [ ] Implement `ICMP Echo Request`.
-- [ ] Implement `ICMP Echo Reply`.
-- [ ] Implement `Generic IPv4 Packet` with RAW payload.
-- [ ] Add packet generator UI.
+- [x] Implement `ICMP Echo Request`.
+- [x] Implement `ICMP Echo Reply`.
+- [x] Implement `Generic IPv4 Packet` with RAW payload.
+- [x] Add packet generator UI.
 
 ### Phase 10. Animation and Simulation Panels
 

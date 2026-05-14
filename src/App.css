@@ -50,6 +50,22 @@ button:hover {
   background: #f2f7fb;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+select,
+input {
+  width: 100%;
+  min-height: 32px;
+  border: 1px solid #c5cdd9;
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: #ffffff;
+  color: #18212f;
+}
+
 .workspace {
   min-height: 0;
   display: grid;
@@ -95,6 +111,17 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.packet-tool label {
+  display: grid;
+  gap: 4px;
+}
+
+.packet-tool label span {
+  color: #526071;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .tool-list button {
