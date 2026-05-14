@@ -1,4 +1,4 @@
-import { selectHostArpTarget } from './arp'
+import { findArpCacheEntry, selectHostArpTarget } from './arp'
 import {
   createIcmpEchoReply,
   createIcmpEchoRequest,
@@ -180,25 +180,42 @@ function simulateIpv4PacketInternal(
     })
   }
 
-  eventBuilder.add('arp-cache-miss', sourceHost.id, {
-    description: `${sourceHost.name} ARP Cache miss for ${arpTarget.targetIp}.`,
-    packetId,
-    details: { targetIp: arpTarget.targetIp },
-  })
-  eventBuilder.add('arp-request-sent', sourceHost.id, {
-    description: `${sourceHost.name} sent ARP Request for ${arpTarget.targetIp}.`,
-    packetId,
-    details: { targetIp: arpTarget.targetIp },
-  })
-  addSwitchForwardingEvents({
-    topology,
-    segmentId: sourceInterface.segmentId,
-    sourceInterface,
-    sourceMac: sourceInterface.macAddress,
-    destinationMac: BROADCAST_MAC,
-    packetId,
-    eventBuilder,
-  })
+  const cachedArpEntry = findArpCacheEntry(
+    sourceHost.arpCache,
+    arpTarget.targetIp,
+  )
+
+  if (cachedArpEntry) {
+    eventBuilder.add('arp-cache-hit', sourceHost.id, {
+      description: `${sourceHost.name} ARP Cache hit for ${arpTarget.targetIp}.`,
+      packetId,
+      details: {
+        ipAddress: cachedArpEntry.ipAddress,
+        macAddress: cachedArpEntry.macAddress,
+        interfaceId: cachedArpEntry.interfaceId,
+      },
+    })
+  } else {
+    eventBuilder.add('arp-cache-miss', sourceHost.id, {
+      description: `${sourceHost.name} ARP Cache miss for ${arpTarget.targetIp}.`,
+      packetId,
+      details: { targetIp: arpTarget.targetIp },
+    })
+    eventBuilder.add('arp-request-sent', sourceHost.id, {
+      description: `${sourceHost.name} sent ARP Request for ${arpTarget.targetIp}.`,
+      packetId,
+      details: { targetIp: arpTarget.targetIp },
+    })
+    addSwitchForwardingEvents({
+      topology,
+      segmentId: sourceInterface.segmentId,
+      sourceInterface,
+      sourceMac: sourceInterface.macAddress,
+      destinationMac: BROADCAST_MAC,
+      packetId,
+      eventBuilder,
+    })
+  }
 
   const nextHopInterface = interfaceByIp(topology, arpTarget.targetIp)
 
@@ -224,21 +241,24 @@ function simulateIpv4PacketInternal(
     })
   }
 
-  addArpReplyAndCacheEvents({
-    topology,
-    requester: sourceHost,
-    requesterInterface: sourceInterface,
-    responder: nextHopInterface,
-    targetIp: arpTarget.targetIp,
-    packetId,
-    eventBuilder,
-  })
+  if (!cachedArpEntry) {
+    addArpReplyAndCacheEvents({
+      topology,
+      requester: sourceHost,
+      requesterInterface: sourceInterface,
+      responder: nextHopInterface,
+      targetIp: arpTarget.targetIp,
+      packetId,
+      eventBuilder,
+    })
+  }
   addSwitchForwardingEvents({
     topology,
     segmentId: sourceInterface.segmentId,
     sourceInterface,
     sourceMac: sourceInterface.macAddress,
-    destinationMac: nextHopInterface.networkInterface.macAddress,
+    destinationMac:
+      cachedArpEntry?.macAddress ?? nextHopInterface.networkInterface.macAddress,
     packetId,
     eventBuilder,
   })
@@ -451,25 +471,39 @@ function forwardAtRouterWithEvents(
     },
   })
   if (result.nextHopIp && result.outInterface) {
-    eventBuilder.add('arp-cache-miss', router.id, {
-      description: `${router.name} ARP Cache miss for ${result.nextHopIp}.`,
-      packetId: datagram.id,
-      details: { targetIp: result.nextHopIp },
-    })
-    eventBuilder.add('arp-request-sent', router.id, {
-      description: `${router.name} sent ARP Request for ${result.nextHopIp}.`,
-      packetId: datagram.id,
-      details: { targetIp: result.nextHopIp },
-    })
-    addSwitchForwardingEvents({
-      topology,
-      segmentId: result.outInterface.segmentId,
-      sourceInterface: result.outInterface,
-      sourceMac: result.outInterface.macAddress,
-      destinationMac: BROADCAST_MAC,
-      packetId: datagram.id,
-      eventBuilder,
-    })
+    const cachedArpEntry = findArpCacheEntry(router.arpCache, result.nextHopIp)
+
+    if (cachedArpEntry) {
+      eventBuilder.add('arp-cache-hit', router.id, {
+        description: `${router.name} ARP Cache hit for ${result.nextHopIp}.`,
+        packetId: datagram.id,
+        details: {
+          ipAddress: cachedArpEntry.ipAddress,
+          macAddress: cachedArpEntry.macAddress,
+          interfaceId: cachedArpEntry.interfaceId,
+        },
+      })
+    } else {
+      eventBuilder.add('arp-cache-miss', router.id, {
+        description: `${router.name} ARP Cache miss for ${result.nextHopIp}.`,
+        packetId: datagram.id,
+        details: { targetIp: result.nextHopIp },
+      })
+      eventBuilder.add('arp-request-sent', router.id, {
+        description: `${router.name} sent ARP Request for ${result.nextHopIp}.`,
+        packetId: datagram.id,
+        details: { targetIp: result.nextHopIp },
+      })
+      addSwitchForwardingEvents({
+        topology,
+        segmentId: result.outInterface.segmentId,
+        sourceInterface: result.outInterface,
+        sourceMac: result.outInterface.macAddress,
+        destinationMac: BROADCAST_MAC,
+        packetId: datagram.id,
+        eventBuilder,
+      })
+    }
 
     const arpResponder = interfaceByIp(topology, result.nextHopIp)
 
@@ -499,15 +533,17 @@ function forwardAtRouterWithEvents(
       }
     }
 
-    addArpReplyAndCacheEvents({
-      topology,
-      requester: router,
-      requesterInterface: result.outInterface,
-      responder: arpResponder,
-      targetIp: result.nextHopIp,
-      packetId: datagram.id,
-      eventBuilder,
-    })
+    if (!cachedArpEntry) {
+      addArpReplyAndCacheEvents({
+        topology,
+        requester: router,
+        requesterInterface: result.outInterface,
+        responder: arpResponder,
+        targetIp: result.nextHopIp,
+        packetId: datagram.id,
+        eventBuilder,
+      })
+    }
   }
   eventBuilder.add('router-frame-encapsulated', router.id, {
     description: `${router.name} created new Ethernet Frame.`,

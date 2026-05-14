@@ -13,7 +13,8 @@ export function Inspector() {
     | { id: string }
     | undefined
   const selectedArpIpAddress =
-    currentEvent?.type === 'arp-cache-updated'
+    currentEvent?.type === 'arp-cache-updated' ||
+    currentEvent?.type === 'arp-cache-hit'
       ? stringDetail(currentEvent.details, 'ipAddress')
       : undefined
   const selectedMacAddress =

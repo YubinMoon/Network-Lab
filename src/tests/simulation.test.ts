@@ -90,6 +90,30 @@ describe('IPv4 forwarding simulation', () => {
     expect(switchS1?.macAddressTable.length).toBeGreaterThan(0)
   })
 
+  test('uses ARP Cache hits after dynamic tables are populated', () => {
+    const topology = applyAutoConfiguration(firstMilestoneTopology())
+    const firstTrace = simulateIpv4Packet(topology, {
+      sourceHostId: 'host-a',
+      destinationIp: '10.0.2.10',
+      ttl: 64,
+      packetType: 'generic-ipv4',
+    })
+    const topologyWithCache = applySimulationTraceToTopology(topology, firstTrace)
+    const secondTrace = simulateIpv4Packet(topologyWithCache, {
+      sourceHostId: 'host-a',
+      destinationIp: '10.0.2.10',
+      ttl: 64,
+      packetType: 'generic-ipv4',
+    })
+
+    expect(
+      secondTrace.events.some((event) => event.type === 'arp-cache-hit'),
+    ).toBe(true)
+    expect(
+      secondTrace.events.filter((event) => event.type === 'arp-request-sent'),
+    ).toHaveLength(0)
+  })
+
   test('drops external host traffic with no Default Gateway', () => {
     const topology = applyAutoConfiguration(
       topologyState([host('host-a', 'Host A')], []),
