@@ -1,10 +1,15 @@
 import { useLabStore } from '../../store/useLabStore'
 import type { NetworkInterface, NetworkLink, NetworkNode } from '../../domain/types'
+import { ValidationPanel } from './ValidationPanel'
 
 export function Inspector() {
   const topology = useLabStore((state) => state.topology)
   const selectedObject = useLabStore((state) => state.selectedObject)
+  const simulationTrace = useLabStore((state) => state.simulationTrace)
+  const currentEventIndex = useLabStore((state) => state.currentEventIndex)
   const deleteSelection = useLabStore((state) => state.deleteSelection)
+  const selectedRoute = simulationTrace?.events[currentEventIndex]?.details
+    ?.selectedRoute as { id: string } | undefined
   const selectedNode =
     selectedObject?.kind === 'node'
       ? topology.nodes.find((node) => node.id === selectedObject.id)
@@ -17,8 +22,11 @@ export function Inspector() {
   return (
     <aside className="inspector" aria-label="Inspector">
       <h2>Inspector</h2>
+      <ValidationPanel />
       {!selectedNode && !selectedLink ? <EmptySelection /> : null}
-      {selectedNode ? <NodeInspector node={selectedNode} /> : null}
+      {selectedNode ? (
+        <NodeInspector node={selectedNode} selectedRouteId={selectedRoute?.id} />
+      ) : null}
       {selectedLink ? (
         <LinkInspector link={selectedLink} nodes={topology.nodes} />
       ) : null}
@@ -84,7 +92,13 @@ function EmptySelection() {
   )
 }
 
-function NodeInspector({ node }: { node: NetworkNode }) {
+function NodeInspector({
+  node,
+  selectedRouteId,
+}: {
+  node: NetworkNode
+  selectedRouteId?: string
+}) {
   return (
     <>
       <section>
@@ -166,7 +180,12 @@ function NodeInspector({ node }: { node: NetworkNode }) {
               </thead>
               <tbody>
                 {node.routingTable.map((route) => (
-                  <tr key={route.id}>
+                  <tr
+                    className={
+                      route.id === selectedRouteId ? 'highlight-row' : undefined
+                    }
+                    key={route.id}
+                  >
                     <td>
                       {route.destinationNetwork}/{route.prefixLength}
                     </td>

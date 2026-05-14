@@ -306,6 +306,26 @@ dd {
   background: #fff1f1;
 }
 
+.validation-panel ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.validation-panel .error {
+  color: #8f2525;
+}
+
+.validation-panel .warning {
+  color: #8a6424;
+}
+
+.highlight-row {
+  background: #eef5ff;
+}
+
 .simulation-panel {
   display: grid;
   gap: 12px;

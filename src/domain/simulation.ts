@@ -9,6 +9,7 @@ import {
   createIpv4Frame,
   forwardIpv4FrameAtRouter,
 } from './ipv4'
+import { validateTopology } from './validation'
 import type {
   EthernetFrame,
   HostNode,
@@ -40,6 +41,19 @@ export function simulateIpv4Packet(
   topology: TopologyState,
   input: Ipv4SimulationInput,
 ): PacketTrace {
+  const unsupportedLoop = validateTopology(topology).find(
+    (issue) => issue.code === 'unsupported-l2-loop',
+  )
+
+  if (topology.settings.blockUnsupportedL2Loops && unsupportedLoop) {
+    return droppedTrace(
+      'packet-1',
+      input,
+      'Unsupported L2 Loop',
+      createEventBuilder(),
+    )
+  }
+
   return simulateIpv4PacketInternal(topology, input, {
     packetId: 'packet-1',
     allowIcmpReply: true,

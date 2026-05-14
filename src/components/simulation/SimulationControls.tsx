@@ -12,6 +12,8 @@ export function SimulationControls() {
   const previousEvent = useLabStore((state) => state.previousEvent)
   const resetSimulation = useLabStore((state) => state.resetSimulation)
   const setSimulationSpeed = useLabStore((state) => state.setSimulationSpeed)
+  const resetDynamicTables = useLabStore((state) => state.resetDynamicTables)
+  const clearSimulationTrace = useLabStore((state) => state.clearSimulationTrace)
 
   useEffect(() => {
     if (simulationStatus !== 'running') {
@@ -39,6 +41,12 @@ export function SimulationControls() {
       </button>
       <button type="button" onClick={resetSimulation}>
         Reset
+      </button>
+      <button type="button" onClick={resetDynamicTables}>
+        Reset Dynamic Tables
+      </button>
+      <button type="button" onClick={clearSimulationTrace}>
+        Clear Event Log
       </button>
       <select
         aria-label="Speed"

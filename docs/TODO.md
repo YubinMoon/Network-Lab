@@ -25,10 +25,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed Phase 10 simulation controls, Timeline, Event Log, Layer View, Packet Detail, Binary Match, and current packet token UI.
 - 2026-05-14: Completed Phase 11 JSON export/import, Local Storage save/load, compressed URL hash sharing, and persistence controls.
 - 2026-05-14: Completed Phase 12 required example topologies and Example loader UI with initial packet traces.
+- 2026-05-14: Completed Phase 13 validation warnings, unsupported L2 loop simulation block, reset controls, event log clearing, and route table highlighting.
 
 ## In Progress
 
-- Phase 13: Polish and validation.
+- Completion audit.
 
 ## Planned Work
 
@@ -130,7 +131,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ### Phase 13. Polish and Validation
 
-- [ ] Add validation warnings.
-- [ ] Add unsupported L2 loop detection.
-- [ ] Improve inspector tables and selected field highlights.
-- [ ] Add reset controls for dynamic tables and event logs.
+- [x] Add validation warnings.
+- [x] Add unsupported L2 loop detection.
+- [x] Improve inspector tables and selected field highlights.
+- [x] Add reset controls for dynamic tables and event logs.

@@ -56,6 +56,8 @@ interface LabStoreState {
   selectLink: (linkId: LinkId) => void
   clearSelection: () => void
   clearTopology: () => void
+  resetDynamicTables: () => void
+  clearSimulationTrace: () => void
   loadFirstMilestoneTopology: () => void
   sendPacket: (input: PacketGeneratorInput) => void
   playSimulation: () => void
@@ -258,6 +260,33 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
     set({
       topology: emptyTopology(),
       selectedObject: null,
+      simulationTrace: null,
+      simulationStatus: 'idle',
+      currentEventIndex: 0,
+    })
+  },
+
+  resetDynamicTables: () => {
+    set((state) => ({
+      topology: {
+        ...state.topology,
+        nodes: state.topology.nodes.map((node) => {
+          if (node.type === 'host') {
+            return { ...node, arpCache: [] }
+          }
+
+          if (node.type === 'switch') {
+            return { ...node, macAddressTable: [] }
+          }
+
+          return { ...node, arpCache: [] }
+        }),
+      },
+    }))
+  },
+
+  clearSimulationTrace: () => {
+    set({
       simulationTrace: null,
       simulationStatus: 'idle',
       currentEventIndex: 0,
