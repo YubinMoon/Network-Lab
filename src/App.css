@@ -327,6 +327,10 @@ dd {
   font-size: 13px;
 }
 
+.validation-panel li {
+  white-space: pre-line;
+}
+
 .validation-panel .error {
   color: #8f2525;
 }

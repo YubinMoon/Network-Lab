@@ -173,7 +173,7 @@ function validateUnsupportedL2Loop(topology: TopologyState): ValidationIssue[] {
       severity: 'error',
       code: 'unsupported-l2-loop',
       message:
-        'Unsupported L2 Loop Detected. This topology creates a Layer 2 loop. STP is not supported in this lab.',
+        'Unsupported L2 Loop Detected\nThis topology creates a Layer 2 loop. STP is not supported in this lab.',
       relatedLinkIds: loopLinkIds,
     },
   ]

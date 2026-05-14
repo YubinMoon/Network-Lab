@@ -29,6 +29,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed completion-audit follow-up for ARP reply/cache events, switch MAC learning events in packet traces, deterministic `Link Loss` drops, `Packet Count` batch simulation, and dynamic table updates.
 - 2026-05-14: Completed completion-audit follow-up for animated packet movement on active `Link` edges during packet events.
 - 2026-05-14: Completed completion-audit follow-up for ARP Cache hit simulation after dynamic cache entries are populated.
+- 2026-05-14: Completed completion-audit follow-up for exact unsupported Layer 2 loop warning text.
 
 ## In Progress
 
