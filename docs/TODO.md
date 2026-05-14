@@ -12,23 +12,24 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 ## Completed Work
 
 - 2026-05-14: Created project TODO tracking and documented TODO/git workflow in `AGENTS.md`.
+- 2026-05-14: Completed Phase 0 project bootstrap with Vite, React, TypeScript strict mode, Vitest, baseline folders, and passing test/build checks.
 
 ## In Progress
 
-- Phase 0: Project bootstrap.
+- Phase 1: Domain utilities and data model.
 
 ## Planned Work
 
 ### Phase 0. Project Bootstrap
 
-- [ ] Create a Vite + React + TypeScript app at the repository root.
-- [ ] Install runtime dependencies: `@xyflow/react`, `zustand`, `lz-string`, `nanoid`, `clsx`.
-- [ ] Install dev dependencies: `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `jsdom`.
-- [ ] Ensure TypeScript strict mode is enabled.
-- [ ] Create the basic source folder structure.
-- [ ] Configure the test runner.
-- [ ] Verify `npm run test` passes.
-- [ ] Verify `npm run build` passes.
+- [x] Create a Vite + React + TypeScript app at the repository root.
+- [x] Install runtime dependencies: `@xyflow/react`, `zustand`, `lz-string`, `nanoid`, `clsx`.
+- [x] Install dev dependencies: `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `jsdom`.
+- [x] Ensure TypeScript strict mode is enabled.
+- [x] Create the basic source folder structure.
+- [x] Configure the test runner.
+- [x] Verify `npm run test` passes.
+- [x] Verify `npm run build` passes.
 
 ### Phase 1. Domain Utilities and Data Model
 
