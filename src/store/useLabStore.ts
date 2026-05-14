@@ -30,6 +30,7 @@ import {
   loadTopologyFromLocalStorage,
   saveTopologyToLocalStorage,
 } from '../persistence/localStorage'
+import type { ExampleTopology } from '../examples/topologies'
 
 export type LabSelection =
   | { kind: 'node'; id: NodeId }
@@ -69,6 +70,7 @@ interface LabStoreState {
   loadTopology: () => void
   createShareUrl: () => void
   loadTopologyFromHash: (hash: string) => void
+  loadExampleTopology: (example: ExampleTopology) => void
 }
 
 const emptyTopology = (): TopologyState => ({
@@ -408,6 +410,31 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       selectedObject: null,
       simulationTrace: null,
       simulationStatus: 'idle',
+      currentEventIndex: 0,
+    })
+  },
+
+  loadExampleTopology: (example) => {
+    const topology = applyAutoConfiguration(example.topology)
+    const destinationIp =
+      example.packet.destinationMode === 'host'
+        ? hostIpAddress(topology, example.packet.targetHostId)
+        : example.packet.destinationIp
+    const simulationTrace = destinationIp
+      ? simulateIpv4Packet(topology, {
+          sourceHostId: example.packet.sourceHostId,
+          destinationIp,
+          ttl: example.packet.ttl,
+          packetType: example.packet.packetType,
+          payload: example.packet.payload,
+        })
+      : null
+
+    set({
+      topology,
+      selectedObject: null,
+      simulationTrace,
+      simulationStatus: simulationTrace ? 'paused' : 'idle',
       currentEventIndex: 0,
     })
   },

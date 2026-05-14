@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import '@xyflow/react/dist/style.css'
 import './App.css'
+import { ExampleMenu } from './components/common/ExampleMenu'
 import { PersistenceControls } from './components/common/PersistenceControls'
 import { NetworkCanvas } from './components/canvas/NetworkCanvas'
 import { Inspector } from './components/inspector/Inspector'
@@ -62,6 +63,7 @@ function App() {
               Clear
             </button>
           </div>
+          <ExampleMenu />
           <PacketGenerator />
           <PersistenceControls />
         </aside>

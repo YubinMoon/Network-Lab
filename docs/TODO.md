@@ -24,10 +24,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed Phase 9 ICMP Echo Request/Reply, Generic IPv4 Packet payloads, Packet Generator UI, and Event Log integration.
 - 2026-05-14: Completed Phase 10 simulation controls, Timeline, Event Log, Layer View, Packet Detail, Binary Match, and current packet token UI.
 - 2026-05-14: Completed Phase 11 JSON export/import, Local Storage save/load, compressed URL hash sharing, and persistence controls.
+- 2026-05-14: Completed Phase 12 required example topologies and Example loader UI with initial packet traces.
 
 ## In Progress
 
-- Phase 12: Examples.
+- Phase 13: Polish and validation.
 
 ## Planned Work
 
@@ -124,8 +125,8 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ### Phase 12. Examples
 
-- [ ] Add required example topologies.
-- [ ] Ensure each example can be simulated immediately.
+- [x] Add required example topologies.
+- [x] Ensure each example can be simulated immediately.
 
 ### Phase 13. Polish and Validation
 
