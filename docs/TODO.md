@@ -13,10 +13,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 - 2026-05-14: Created project TODO tracking and documented TODO/git workflow in `AGENTS.md`.
 - 2026-05-14: Completed Phase 0 project bootstrap with Vite, React, TypeScript strict mode, Vitest, baseline folders, and passing test/build checks.
+- 2026-05-14: Completed Phase 1 domain data model plus IPv4, MAC, and validation utilities with unit tests.
 
 ## In Progress
 
-- Phase 1: Domain utilities and data model.
+- Phase 2: Topology store and basic editor.
 
 ## Planned Work
 
@@ -33,11 +34,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ### Phase 1. Domain Utilities and Data Model
 
-- [ ] Define core topology, interface, route, packet, and simulation event types.
-- [ ] Implement IPv4 utilities.
-- [ ] Implement MAC address utilities.
-- [ ] Add validation helpers.
-- [ ] Add unit tests for IPv4 and MAC utilities.
+- [x] Define core topology, interface, route, packet, and simulation event types.
+- [x] Implement IPv4 utilities.
+- [x] Implement MAC address utilities.
+- [x] Add validation helpers.
+- [x] Add unit tests for IPv4 and MAC utilities.
 
 ### Phase 2. Topology Store and Basic Editor
 
