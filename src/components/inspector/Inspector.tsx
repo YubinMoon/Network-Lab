@@ -119,7 +119,28 @@ function NodeInspector({ node }: { node: NetworkNode }) {
       {node.type === 'switch' ? (
         <section>
           <h3>MAC Address Table</h3>
-          <p>{node.macAddressTable.length} entries</p>
+          {node.macAddressTable.length === 0 ? (
+            <p>0 entries</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>MAC Address</th>
+                  <th>Interface</th>
+                  <th>Age</th>
+                </tr>
+              </thead>
+              <tbody>
+                {node.macAddressTable.map((entry) => (
+                  <tr key={entry.macAddress}>
+                    <td>{entry.macAddress}</td>
+                    <td>{entry.portInterfaceId}</td>
+                    <td>{entry.ageSeconds}s</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </section>
       ) : null}
       {node.type === 'router' ? (

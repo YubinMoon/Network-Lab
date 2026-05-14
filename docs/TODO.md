@@ -18,10 +18,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed Phase 3 Network Segment detection with interface graph components, LAN/point-to-point classification, segment identity preservation, and Inspector visibility.
 - 2026-05-14: Completed Phase 4 auto MAC/IP/default gateway assignment and displayed IPv4 interface configuration in the canvas and Inspector.
 - 2026-05-14: Completed Phase 5 connected route generation, auto static route generation, route precedence, and Longest Prefix Match lookup tests.
+- 2026-05-14: Completed Phase 6 Layer 2 switch MAC learning, broadcast flooding, unknown unicast flooding, known unicast forwarding, and MAC Address Table display.
 
 ## In Progress
 
-- Phase 6: Layer 2 switching.
+- Phase 7: ARP simulation.
 
 ## Planned Work
 
@@ -75,11 +76,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ### Phase 6. Layer 2 Switching
 
-- [ ] Implement switch MAC learning.
-- [ ] Implement broadcast flooding.
-- [ ] Implement unknown unicast flooding.
-- [ ] Implement known unicast forwarding.
-- [ ] Add Layer 2 tests.
+- [x] Implement switch MAC learning.
+- [x] Implement broadcast flooding.
+- [x] Implement unknown unicast flooding.
+- [x] Implement known unicast forwarding.
+- [x] Add Layer 2 tests.
 
 ### Phase 7. ARP Simulation
 
