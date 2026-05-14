@@ -113,7 +113,7 @@ function NodeInspector({ node }: { node: NetworkNode }) {
       {node.type === 'host' ? (
         <section>
           <h3>ARP Cache</h3>
-          <p>{node.arpCache.length} entries</p>
+          <ArpCacheTable arpCache={node.arpCache} />
         </section>
       ) : null}
       {node.type === 'switch' ? (
@@ -141,6 +141,12 @@ function NodeInspector({ node }: { node: NetworkNode }) {
               </tbody>
             </table>
           )}
+        </section>
+      ) : null}
+      {node.type === 'router' ? (
+        <section>
+          <h3>ARP Cache</h3>
+          <ArpCacheTable arpCache={node.arpCache} />
         </section>
       ) : null}
       {node.type === 'router' ? (
@@ -175,6 +181,42 @@ function NodeInspector({ node }: { node: NetworkNode }) {
         </section>
       ) : null}
     </>
+  )
+}
+
+function ArpCacheTable({
+  arpCache,
+}: {
+  arpCache: Array<{
+    ipAddress: string
+    macAddress: string
+    interfaceId: string
+    ageSeconds: number
+  }>
+}) {
+  if (arpCache.length === 0) {
+    return <p>0 entries</p>
+  }
+
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>IP Address</th>
+          <th>MAC Address</th>
+          <th>Interface</th>
+        </tr>
+      </thead>
+      <tbody>
+        {arpCache.map((entry) => (
+          <tr key={`${entry.interfaceId}-${entry.ipAddress}`}>
+            <td>{entry.ipAddress}</td>
+            <td>{entry.macAddress}</td>
+            <td>{entry.interfaceId}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
 

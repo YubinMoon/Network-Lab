@@ -19,10 +19,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed Phase 4 auto MAC/IP/default gateway assignment and displayed IPv4 interface configuration in the canvas and Inspector.
 - 2026-05-14: Completed Phase 5 connected route generation, auto static route generation, route precedence, and Longest Prefix Match lookup tests.
 - 2026-05-14: Completed Phase 6 Layer 2 switch MAC learning, broadcast flooding, unknown unicast flooding, known unicast forwarding, and MAC Address Table display.
+- 2026-05-14: Completed Phase 7 ARP target selection, ARP request/reply frame helpers, ARP cache updates, and ARP Cache Inspector tables.
 
 ## In Progress
 
-- Phase 7: ARP simulation.
+- Phase 8: IPv4 forwarding simulation.
 
 ## Planned Work
 
@@ -84,10 +85,10 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ### Phase 7. ARP Simulation
 
-- [ ] Implement ARP cache lookup.
-- [ ] Implement ARP request/reply behavior.
-- [ ] Ensure ARP stays within one `Network Segment`.
-- [ ] Add ARP tests.
+- [x] Implement ARP cache lookup.
+- [x] Implement ARP request/reply behavior.
+- [x] Ensure ARP stays within one `Network Segment`.
+- [x] Add ARP tests.
 
 ### Phase 8. IPv4 Forwarding Simulation
 
