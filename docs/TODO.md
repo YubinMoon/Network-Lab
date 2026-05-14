@@ -22,10 +22,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed Phase 7 ARP target selection, ARP request/reply frame helpers, ARP cache updates, and ARP Cache Inspector tables.
 - 2026-05-14: Completed Phase 8 deterministic IPv4 forwarding trace with host send decisions, router TTL decrement, route lookup, re-encapsulation, and packet drop reasons.
 - 2026-05-14: Completed Phase 9 ICMP Echo Request/Reply, Generic IPv4 Packet payloads, Packet Generator UI, and Event Log integration.
+- 2026-05-14: Completed Phase 10 simulation controls, Timeline, Event Log, Layer View, Packet Detail, Binary Match, and current packet token UI.
 
 ## In Progress
 
-- Phase 10: Animation and simulation panels.
+- Phase 11: URL state and export/import.
 
 ## Planned Work
 
@@ -108,10 +109,10 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ### Phase 10. Animation and Simulation Panels
 
-- [ ] Add animated packet tokens.
-- [ ] Add simulation controls.
-- [ ] Add `Event Log`, `Layer View`, `Packet Detail`, `Binary Match`, and `Timeline` panels.
-- [ ] Highlight relevant tables during simulation.
+- [x] Add animated packet tokens.
+- [x] Add simulation controls.
+- [x] Add `Event Log`, `Layer View`, `Packet Detail`, `Binary Match`, and `Timeline` panels.
+- [x] Highlight relevant tables during simulation.
 
 ### Phase 11. URL State and Export/Import
 

@@ -13,6 +13,7 @@ import { useCallback, useMemo } from 'react'
 import { useLabStore } from '../../store/useLabStore'
 import { HostNode } from './HostNode'
 import { LinkEdge } from './LinkEdge'
+import { PacketToken } from './PacketToken'
 import { RouterNode } from './RouterNode'
 import { SwitchNode } from './SwitchNode'
 import type { LabFlowEdge, LabFlowNode } from './flowTypes'
@@ -109,6 +110,7 @@ export function NetworkCanvas() {
         <Background />
         <Controls />
         <MiniMap pannable zoomable />
+        <PacketToken />
       </ReactFlow>
     </ReactFlowProvider>
   )

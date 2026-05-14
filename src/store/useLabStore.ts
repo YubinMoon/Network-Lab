@@ -14,6 +14,7 @@ import {
   type PacketGeneratorInput,
   type PacketTrace,
   type RouterNode,
+  type SimulationStatus,
   type SwitchNode,
   type TopologyState,
 } from '../domain/types'
@@ -29,6 +30,9 @@ interface LabStoreState {
   topology: TopologyState
   selectedObject: LabSelection
   simulationTrace: PacketTrace | null
+  simulationStatus: SimulationStatus
+  currentEventIndex: number
+  simulationSpeed: number
   addNode: (type: NodeType) => void
   addLink: (sourceNodeId: NodeId, targetNodeId: NodeId) => void
   moveNode: (nodeId: NodeId, position: CanvasPosition) => void
@@ -41,6 +45,12 @@ interface LabStoreState {
   clearTopology: () => void
   loadFirstMilestoneTopology: () => void
   sendPacket: (input: PacketGeneratorInput) => void
+  playSimulation: () => void
+  pauseSimulation: () => void
+  nextEvent: () => void
+  previousEvent: () => void
+  resetSimulation: () => void
+  setSimulationSpeed: (speed: number) => void
 }
 
 const emptyTopology = (): TopologyState => ({
@@ -54,6 +64,9 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   topology: emptyTopology(),
   selectedObject: null,
   simulationTrace: null,
+  simulationStatus: 'idle',
+  currentEventIndex: 0,
+  simulationSpeed: 1,
 
   addNode: (type) => {
     set((state) => {
@@ -66,6 +79,8 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
         }),
         selectedObject: { kind: 'node', id: node.id },
         simulationTrace: null,
+        simulationStatus: 'idle',
+        currentEventIndex: 0,
       }
     })
   },
@@ -131,6 +146,8 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
         }),
         selectedObject: { kind: 'link', id: link.id },
         simulationTrace: null,
+        simulationStatus: 'idle',
+        currentEventIndex: 0,
       }
     })
   },
@@ -168,6 +185,8 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
         }),
         selectedObject: null,
         simulationTrace: null,
+        simulationStatus: 'idle',
+        currentEventIndex: 0,
       }
     })
   },
@@ -183,6 +202,8 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       }),
       selectedObject: null,
       simulationTrace: null,
+      simulationStatus: 'idle',
+      currentEventIndex: 0,
     }))
   },
 
@@ -212,7 +233,13 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   },
 
   clearTopology: () => {
-    set({ topology: emptyTopology(), selectedObject: null, simulationTrace: null })
+    set({
+      topology: emptyTopology(),
+      selectedObject: null,
+      simulationTrace: null,
+      simulationStatus: 'idle',
+      currentEventIndex: 0,
+    })
   },
 
   loadFirstMilestoneTopology: () => {
@@ -220,6 +247,8 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       topology: applyAutoConfiguration(createFirstMilestoneTopology()),
       selectedObject: null,
       simulationTrace: null,
+      simulationStatus: 'idle',
+      currentEventIndex: 0,
     })
   },
 
@@ -234,15 +263,65 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       return
     }
 
-    set({
-      simulationTrace: simulateIpv4Packet(topology, {
+    const simulationTrace = simulateIpv4Packet(topology, {
         sourceHostId: input.sourceHostId,
         destinationIp,
         ttl: input.ttl,
         packetType: input.packetType,
         payload: input.payload,
-      }),
+      })
+
+    set({
+      simulationTrace,
+      simulationStatus:
+        simulationTrace.events.length > 0 ? 'paused' : 'completed',
+      currentEventIndex: 0,
     })
+  },
+
+  playSimulation: () => {
+    set((state) => ({
+      simulationStatus: state.simulationTrace ? 'running' : 'idle',
+    }))
+  },
+
+  pauseSimulation: () => {
+    set((state) => ({
+      simulationStatus: state.simulationTrace ? 'paused' : 'idle',
+    }))
+  },
+
+  nextEvent: () => {
+    set((state) => {
+      const eventCount = state.simulationTrace?.events.length ?? 0
+      const nextIndex = Math.min(state.currentEventIndex + 1, eventCount - 1)
+
+      return {
+        currentEventIndex: Math.max(nextIndex, 0),
+        simulationStatus:
+          eventCount > 0 && nextIndex >= eventCount - 1
+            ? 'completed'
+            : state.simulationStatus,
+      }
+    })
+  },
+
+  previousEvent: () => {
+    set((state) => ({
+      currentEventIndex: Math.max(state.currentEventIndex - 1, 0),
+      simulationStatus: state.simulationTrace ? 'paused' : 'idle',
+    }))
+  },
+
+  resetSimulation: () => {
+    set((state) => ({
+      currentEventIndex: 0,
+      simulationStatus: state.simulationTrace ? 'paused' : 'idle',
+    }))
+  },
+
+  setSimulationSpeed: (speed) => {
+    set({ simulationSpeed: speed })
   },
 }))
 

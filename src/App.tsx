@@ -3,6 +3,7 @@ import './App.css'
 import { NetworkCanvas } from './components/canvas/NetworkCanvas'
 import { Inspector } from './components/inspector/Inspector'
 import { PacketGenerator } from './components/simulation/PacketGenerator'
+import { SimulationPanel } from './components/simulation/SimulationPanel'
 import { useLabStore } from './store/useLabStore'
 import type { NodeType } from './domain/types'
 
@@ -11,14 +12,6 @@ const paletteItems: Array<{ label: string; type: NodeType }> = [
   { label: 'Switch', type: 'switch' },
   { label: 'Router', type: 'router' },
 ]
-const simulationTabs = [
-  'Timeline',
-  'Event Log',
-  'Layer View',
-  'Packet Detail',
-  'Binary Match',
-]
-
 function App() {
   const addNode = useLabStore((state) => state.addNode)
   const clearTopology = useLabStore((state) => state.clearTopology)
@@ -26,7 +19,6 @@ function App() {
     (state) => state.loadFirstMilestoneTopology,
   )
   const segmentCount = useLabStore((state) => state.topology.segments.length)
-  const simulationTrace = useLabStore((state) => state.simulationTrace)
 
   return (
     <main className="lab-shell">
@@ -77,31 +69,7 @@ function App() {
         <Inspector />
       </section>
 
-      <section className="simulation-panel" aria-label="Simulation Panel">
-        <div className="simulation-controls" aria-label="Simulation Controls">
-          <button type="button">Play</button>
-          <button type="button">Pause</button>
-          <button type="button">Next Event</button>
-          <button type="button">Reset</button>
-          <span>Speed: 1x</span>
-        </div>
-        <div className="simulation-tabs">
-          {simulationTabs.map((tab) => (
-            <button type="button" key={tab}>
-              {tab}
-            </button>
-          ))}
-        </div>
-        <ol className="event-log" aria-label="Event Log">
-          {simulationTrace ? (
-            simulationTrace.events.map((event) => (
-              <li key={event.id}>{event.description}</li>
-            ))
-          ) : (
-            <li>Simulation idle.</li>
-          )}
-        </ol>
-      </section>
+      <SimulationPanel />
     </main>
   )
 }
