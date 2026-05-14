@@ -125,11 +125,52 @@ function NodeInspector({ node }: { node: NetworkNode }) {
       {node.type === 'router' ? (
         <section>
           <h3>Routing Table</h3>
-          <p>{node.routingTable.length} entries</p>
+          {node.routingTable.length === 0 ? (
+            <p>0 entries</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Destination</th>
+                  <th>Next Hop</th>
+                  <th>Out Interface</th>
+                  <th>Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                {node.routingTable.map((route) => (
+                  <tr key={route.id}>
+                    <td>
+                      {route.destinationNetwork}/{route.prefixLength}
+                    </td>
+                    <td>{route.nextHopIp ?? 'connected'}</td>
+                    <td>{route.outInterfaceId}</td>
+                    <td>{routeTypeLabel(route.type)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </section>
       ) : null}
     </>
   )
+}
+
+function routeTypeLabel(type: string): string {
+  if (type === 'connected') {
+    return 'Connected'
+  }
+
+  if (type === 'manual-static') {
+    return 'Manual Static'
+  }
+
+  if (type === 'auto-static') {
+    return 'Auto Static'
+  }
+
+  return 'Default'
 }
 
 function InterfaceTable({ interfaces }: { interfaces: NetworkInterface[] }) {

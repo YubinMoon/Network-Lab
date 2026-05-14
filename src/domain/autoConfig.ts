@@ -1,5 +1,6 @@
 import { broadcastAddress, hostAddressFromOffset } from './ip'
 import { generateMac } from './mac'
+import { applyRoutingTables } from './routing'
 import { applyNetworkSegments } from './segments'
 import type {
   HostNode,
@@ -31,7 +32,7 @@ export function applyAutoConfiguration(topology: TopologyState): TopologyState {
     configureNode(node, assignment, gatewayBySegment),
   )
 
-  return {
+  return applyRoutingTables({
     ...segmentedTopology,
     nodes,
     segments: segmentedTopology.segments.map((segment) => ({
@@ -43,7 +44,7 @@ export function applyAutoConfiguration(topology: TopologyState): TopologyState {
         broadcastAddress(segment.networkAddress, segment.prefixLength),
       ],
     })),
-  }
+  })
 }
 
 function ensureMacAddresses(topology: TopologyState): TopologyState {

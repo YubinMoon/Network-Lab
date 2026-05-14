@@ -17,10 +17,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed Phase 2 topology store and React Flow editor with Host, Switch, Router, Link, selection, deletion, and Inspector support.
 - 2026-05-14: Completed Phase 3 Network Segment detection with interface graph components, LAN/point-to-point classification, segment identity preservation, and Inspector visibility.
 - 2026-05-14: Completed Phase 4 auto MAC/IP/default gateway assignment and displayed IPv4 interface configuration in the canvas and Inspector.
+- 2026-05-14: Completed Phase 5 connected route generation, auto static route generation, route precedence, and Longest Prefix Match lookup tests.
 
 ## In Progress
 
-- Phase 5: Connected and Auto Static routes.
+- Phase 6: Layer 2 switching.
 
 ## Planned Work
 
@@ -67,10 +68,10 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ### Phase 5. Connected and Auto Static Routes
 
-- [ ] Generate `Connected` routes.
-- [ ] Generate `Auto Static` routes.
-- [ ] Implement route precedence for equal prefix length.
-- [ ] Add routing table tests.
+- [x] Generate `Connected` routes.
+- [x] Generate `Auto Static` routes.
+- [x] Implement route precedence for equal prefix length.
+- [x] Add routing table tests.
 
 ### Phase 6. Layer 2 Switching
 
