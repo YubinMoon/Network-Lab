@@ -20,10 +20,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed Phase 5 connected route generation, auto static route generation, route precedence, and Longest Prefix Match lookup tests.
 - 2026-05-14: Completed Phase 6 Layer 2 switch MAC learning, broadcast flooding, unknown unicast flooding, known unicast forwarding, and MAC Address Table display.
 - 2026-05-14: Completed Phase 7 ARP target selection, ARP request/reply frame helpers, ARP cache updates, and ARP Cache Inspector tables.
+- 2026-05-14: Completed Phase 8 deterministic IPv4 forwarding trace with host send decisions, router TTL decrement, route lookup, re-encapsulation, and packet drop reasons.
 
 ## In Progress
 
-- Phase 8: IPv4 forwarding simulation.
+- Phase 9: ICMP Echo and Generic IPv4 packets.
 
 ## Planned Work
 
@@ -92,10 +93,10 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ### Phase 8. IPv4 Forwarding Simulation
 
-- [ ] Implement host send path.
-- [ ] Implement router decapsulation, TTL decrement, route lookup, ARP, and re-encapsulation.
-- [ ] Implement required packet drop reasons.
-- [ ] Add simulation tests.
+- [x] Implement host send path.
+- [x] Implement router decapsulation, TTL decrement, route lookup, ARP, and re-encapsulation.
+- [x] Implement required packet drop reasons.
+- [x] Add simulation tests.
 
 ### Phase 9. ICMP Echo and Generic IPv4 Packets
 
