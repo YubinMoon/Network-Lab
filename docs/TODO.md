@@ -27,6 +27,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed Phase 12 required example topologies and Example loader UI with initial packet traces.
 - 2026-05-14: Completed Phase 13 validation warnings, unsupported L2 loop simulation block, reset controls, event log clearing, and route table highlighting.
 - 2026-05-14: Completed completion-audit follow-up for ARP reply/cache events, switch MAC learning events in packet traces, deterministic `Link Loss` drops, `Packet Count` batch simulation, and dynamic table updates.
+- 2026-05-14: Completed completion-audit follow-up for animated packet movement on active `Link` edges during packet events.
 
 ## In Progress
 

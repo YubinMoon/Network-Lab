@@ -17,6 +17,7 @@ import { PacketToken } from './PacketToken'
 import { RouterNode } from './RouterNode'
 import { SwitchNode } from './SwitchNode'
 import type { LabFlowEdge, LabFlowNode } from './flowTypes'
+import type { LinkId, SimulationEvent, TopologyState } from '../../domain/types'
 
 const nodeTypes = {
   host: HostNode,
@@ -36,6 +37,13 @@ export function NetworkCanvas() {
   const selectNode = useLabStore((state) => state.selectNode)
   const selectLink = useLabStore((state) => state.selectLink)
   const clearSelection = useLabStore((state) => state.clearSelection)
+  const simulationTrace = useLabStore((state) => state.simulationTrace)
+  const currentEventIndex = useLabStore((state) => state.currentEventIndex)
+  const currentEvent = simulationTrace?.events[currentEventIndex]
+  const activeLinkIds = useMemo(
+    () => activeLinkIdsForEvent(topology, currentEvent),
+    [currentEvent, topology],
+  )
 
   const flowNodes = useMemo<LabFlowNode[]>(
     () =>
@@ -68,9 +76,10 @@ export function NetworkCanvas() {
         data: {
           label: 'Link',
           status: link.status,
+          active: activeLinkIds.has(link.id),
         },
       })),
-    [selectedObject, topology.links],
+    [activeLinkIds, selectedObject, topology.links],
   )
 
   const onConnect = useCallback(
@@ -114,4 +123,82 @@ export function NetworkCanvas() {
       </ReactFlow>
     </ReactFlowProvider>
   )
+}
+
+function activeLinkIdsForEvent(
+  topology: TopologyState,
+  event: SimulationEvent | undefined,
+): Set<LinkId> {
+  const activeLinkIds = new Set<LinkId>()
+
+  if (!event) {
+    return activeLinkIds
+  }
+
+  const addInterfaceLinks = (interfaceId: string | undefined) => {
+    if (!interfaceId) {
+      return
+    }
+
+    for (const networkLink of topology.links) {
+      if (
+        networkLink.endpointA.interfaceId === interfaceId ||
+        networkLink.endpointB.interfaceId === interfaceId
+      ) {
+        activeLinkIds.add(networkLink.id)
+      }
+    }
+  }
+  const addNodeLinks = (nodeId: string | undefined) => {
+    if (!nodeId) {
+      return
+    }
+
+    for (const networkLink of topology.links) {
+      if (
+        networkLink.endpointA.nodeId === nodeId ||
+        networkLink.endpointB.nodeId === nodeId
+      ) {
+        activeLinkIds.add(networkLink.id)
+      }
+    }
+  }
+
+  addInterfaceLinks(stringDetail(event.details, 'ingressInterfaceId'))
+  addInterfaceLinks(stringDetail(event.details, 'outInterfaceId'))
+
+  for (const interfaceId of stringArrayDetail(event.details, 'egressInterfaceIds')) {
+    addInterfaceLinks(interfaceId)
+  }
+
+  if (
+    event.type === 'arp-request-sent' ||
+    event.type === 'arp-reply-sent' ||
+    event.type === 'packet-delivered' ||
+    event.type === 'packet-dropped'
+  ) {
+    addNodeLinks(event.actorNodeId)
+  }
+
+  return activeLinkIds
+}
+
+function stringDetail(
+  details: Record<string, unknown> | undefined,
+  key: string,
+): string | undefined {
+  const value = details?.[key]
+
+  return typeof value === 'string' ? value : undefined
+}
+
+function stringArrayDetail(
+  details: Record<string, unknown> | undefined,
+  key: string,
+): string[] {
+  const value = details?.[key]
+
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+    ? value
+    : []
 }

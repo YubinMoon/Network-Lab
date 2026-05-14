@@ -31,8 +31,13 @@ export function LinkEdge({
       <BaseEdge
         id={id}
         path={edgePath}
-        className={selected ? 'link-edge selected' : 'link-edge'}
+        className={linkClassName(Boolean(selected), Boolean(data?.active))}
       />
+      {data?.active ? (
+        <circle className="link-packet-dot" r="5">
+          <animateMotion dur="900ms" repeatCount="indefinite" path={edgePath} />
+        </circle>
+      ) : null}
       <EdgeLabelRenderer>
         <span
           className="link-edge-label"
@@ -40,9 +45,15 @@ export function LinkEdge({
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
           }}
         >
-          {data?.label ?? 'Link'} · {data?.status ?? 'up'}
+          {data?.label ?? 'Link'} - {data?.status ?? 'up'}
         </span>
       </EdgeLabelRenderer>
     </>
   )
+}
+
+function linkClassName(selected: boolean, active: boolean): string {
+  return ['link-edge', selected ? 'selected' : '', active ? 'moving' : '']
+    .filter(Boolean)
+    .join(' ')
 }

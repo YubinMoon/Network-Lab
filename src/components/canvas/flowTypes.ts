@@ -10,6 +10,7 @@ export interface LabNodeData extends Record<string, unknown> {
 export interface LabEdgeData extends Record<string, unknown> {
   label: string
   status: string
+  active: boolean
 }
 
 export type LabFlowNode = Node<LabNodeData, NodeType>

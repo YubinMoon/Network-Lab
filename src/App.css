@@ -267,6 +267,19 @@ dd {
   stroke-width: 4;
 }
 
+.link-edge.moving {
+  stroke: #c2691a;
+  stroke-dasharray: 8 6;
+  animation: link-flow 900ms linear infinite;
+}
+
+.link-packet-dot {
+  fill: #c2691a;
+  stroke: #ffffff;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
 .link-edge-label {
   position: absolute;
   border: 1px solid #c5cdd9;
@@ -443,6 +456,12 @@ dd {
   }
   to {
     transform: translateX(14px);
+  }
+}
+
+@keyframes link-flow {
+  to {
+    stroke-dashoffset: -14;
   }
 }
 

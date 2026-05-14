@@ -391,7 +391,10 @@ function forwardAtRouterWithEvents(
     description: `${router.name} received Ethernet Frame on ${ingressInterface.name}.`,
     packetId: datagram.id,
     frameId: frame.id,
-    details: { ethernetFrame: frame },
+    details: {
+      ethernetFrame: frame,
+      ingressInterfaceId: ingressInterface.id,
+    },
   })
   eventBuilder.add('router-frame-decapsulated', router.id, {
     description: `${router.name} decapsulated IPv4 Datagram.`,
