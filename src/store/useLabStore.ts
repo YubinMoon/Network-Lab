@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid'
+import { applyAutoConfiguration } from '../domain/autoConfig'
 import { generateMac } from '../domain/mac'
-import { applyNetworkSegments } from '../domain/segments'
 import {
   DEFAULT_LAB_SETTINGS,
   type CanvasPosition,
@@ -54,7 +54,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       const node = createNode(type, state.topology.nodes)
 
       return {
-        topology: applyNetworkSegments({
+        topology: applyAutoConfiguration({
           ...state.topology,
           nodes: [...state.topology.nodes, node],
         }),
@@ -107,7 +107,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       }
 
       return {
-        topology: applyNetworkSegments({
+        topology: applyAutoConfiguration({
           ...state.topology,
           nodes: state.topology.nodes.map((node) => {
             if (node.id === sourceNodeId) {
@@ -149,7 +149,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       const removedLinkSet = new Set(removedLinkIds)
 
       return {
-        topology: applyNetworkSegments({
+        topology: applyAutoConfiguration({
           ...state.topology,
           nodes: state.topology.nodes
             .filter((node) => node.id !== nodeId)
@@ -165,7 +165,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
 
   removeLink: (linkId) => {
     set((state) => ({
-      topology: applyNetworkSegments({
+      topology: applyAutoConfiguration({
         ...state.topology,
         nodes: state.topology.nodes.map((node) =>
           detachLinksFromNode(node, new Set([linkId])),
@@ -207,7 +207,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
 
   loadFirstMilestoneTopology: () => {
     set({
-      topology: applyNetworkSegments(createFirstMilestoneTopology()),
+      topology: applyAutoConfiguration(createFirstMilestoneTopology()),
       selectedObject: null,
     })
   },

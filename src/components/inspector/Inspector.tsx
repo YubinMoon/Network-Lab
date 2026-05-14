@@ -106,6 +106,12 @@ function NodeInspector({ node }: { node: NetworkNode }) {
       </section>
       {node.type === 'host' ? (
         <section>
+          <h3>Default Gateway</h3>
+          <p>{node.defaultGatewayIp ?? 'none'}</p>
+        </section>
+      ) : null}
+      {node.type === 'host' ? (
+        <section>
           <h3>ARP Cache</h3>
           <p>{node.arpCache.length} entries</p>
         </section>
@@ -136,6 +142,7 @@ function InterfaceTable({ interfaces }: { interfaces: NetworkInterface[] }) {
       <thead>
         <tr>
           <th>Name</th>
+          <th>IPv4</th>
           <th>MAC Address</th>
           <th>Link</th>
         </tr>
@@ -144,6 +151,11 @@ function InterfaceTable({ interfaces }: { interfaces: NetworkInterface[] }) {
         {interfaces.map((networkInterface) => (
           <tr key={networkInterface.id}>
             <td>{networkInterface.name}</td>
+            <td>
+              {networkInterface.ipAddress && networkInterface.prefixLength
+                ? `${networkInterface.ipAddress}/${networkInterface.prefixLength}`
+                : '-'}
+            </td>
             <td>{networkInterface.macAddress}</td>
             <td>{networkInterface.connectedLinkIds.length}</td>
           </tr>

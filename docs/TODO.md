@@ -16,10 +16,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed Phase 1 domain data model plus IPv4, MAC, and validation utilities with unit tests.
 - 2026-05-14: Completed Phase 2 topology store and React Flow editor with Host, Switch, Router, Link, selection, deletion, and Inspector support.
 - 2026-05-14: Completed Phase 3 Network Segment detection with interface graph components, LAN/point-to-point classification, segment identity preservation, and Inspector visibility.
+- 2026-05-14: Completed Phase 4 auto MAC/IP/default gateway assignment and displayed IPv4 interface configuration in the canvas and Inspector.
 
 ## In Progress
 
-- Phase 4: Auto IP/MAC/Gateway assignment.
+- Phase 5: Connected and Auto Static routes.
 
 ## Planned Work
 
@@ -58,11 +59,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ### Phase 4. Auto IP/MAC/Gateway Assignment
 
-- [ ] Implement deterministic MAC assignment.
-- [ ] Implement LAN and point-to-point CIDR assignment.
-- [ ] Implement host and router interface IP assignment.
-- [ ] Implement default gateway assignment.
-- [ ] Add auto configuration tests.
+- [x] Implement deterministic MAC assignment.
+- [x] Implement LAN and point-to-point CIDR assignment.
+- [x] Implement host and router interface IP assignment.
+- [x] Implement default gateway assignment.
+- [x] Add auto configuration tests.
 
 ### Phase 5. Connected and Auto Static Routes
 

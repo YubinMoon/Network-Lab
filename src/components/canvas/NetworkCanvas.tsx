@@ -47,7 +47,10 @@ export function NetworkCanvas() {
           label: node.name,
           nodeType: node.type,
           interfaces: node.interfaces.map(
-            (networkInterface) => networkInterface.name,
+            (networkInterface) =>
+              networkInterface.ipAddress && networkInterface.prefixLength
+                ? `${networkInterface.name} ${networkInterface.ipAddress}/${networkInterface.prefixLength}`
+                : networkInterface.name,
           ),
         },
       })),
