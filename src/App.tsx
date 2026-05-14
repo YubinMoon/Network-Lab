@@ -6,6 +6,7 @@ import { PersistenceControls } from './components/common/PersistenceControls'
 import { NetworkCanvas } from './components/canvas/NetworkCanvas'
 import { Inspector } from './components/inspector/Inspector'
 import { PacketGenerator } from './components/simulation/PacketGenerator'
+import { SimulationControls } from './components/simulation/SimulationControls'
 import { SimulationPanel } from './components/simulation/SimulationPanel'
 import { useLabStore } from './store/useLabStore'
 import type { NodeType } from './domain/types'
@@ -65,6 +66,7 @@ function App() {
           </div>
           <ExampleMenu />
           <PacketGenerator />
+          <SimulationControls />
           <PersistenceControls />
         </aside>
 
@@ -76,10 +78,9 @@ function App() {
           <NetworkCanvas />
         </section>
 
+        <SimulationPanel />
         <Inspector />
       </section>
-
-      <SimulationPanel />
     </main>
   )
 }

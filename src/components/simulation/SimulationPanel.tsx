@@ -3,7 +3,6 @@ import { BinaryMatchView } from './BinaryMatchView'
 import { EventLog } from './EventLog'
 import { LayerView } from './LayerView'
 import { PacketDetail } from './PacketDetail'
-import { SimulationControls } from './SimulationControls'
 import { Timeline } from './Timeline'
 
 type SimulationTab =
@@ -31,7 +30,7 @@ export function SimulationPanel() {
       aria-label="Simulation Panel"
     >
       <div className="simulation-panel-header">
-        <SimulationControls />
+        <h2>Packet Trace</h2>
         <button
           type="button"
           aria-expanded={!collapsed}

@@ -32,6 +32,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed completion-audit follow-up for exact unsupported Layer 2 loop warning text.
 - 2026-05-14: Completed final completion audit with clean TODO, passing test/build/lint checks, and verified local app response.
 - 2026-05-14: Completed fixed-height lab layout, internal Inspector/Palette scrolling, collapsible Simulation Panel, and visible current-packet canvas state.
+- 2026-05-14: Completed layout adjustment moving playback controls into the left sidebar, expanding the Event Log row, and making the Inspector span the full right column.
 
 ## In Progress
 
