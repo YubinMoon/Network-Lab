@@ -27,7 +27,8 @@
 .top-bar nav,
 .simulation-controls,
 .simulation-tabs,
-.tool-list {
+.tool-list,
+.topology-actions {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -89,6 +90,7 @@ h3 {
 .palette,
 .inspector,
 .packet-tool,
+.topology-actions,
 .inspector section {
   display: flex;
   flex-direction: column;
@@ -134,6 +136,10 @@ dd {
   background-size: 28px 28px;
 }
 
+.canvas .react-flow {
+  min-height: 100%;
+}
+
 .canvas-toolbar {
   display: flex;
   justify-content: space-between;
@@ -145,52 +151,81 @@ dd {
   font-size: 13px;
 }
 
-.topology-preview {
-  min-height: 360px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-  overflow: auto;
-}
-
-.topology-step {
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
-}
-
-.node {
-  width: 112px;
-  height: 72px;
+.network-node-card {
+  width: 132px;
+  min-height: 92px;
   display: grid;
-  place-items: center;
+  gap: 6px;
   border: 2px solid #2f4054;
   border-radius: 8px;
+  padding: 10px;
   background: #ffffff;
-  font-weight: 700;
-  text-align: center;
+  color: #18212f;
+  box-shadow: 0 10px 20px rgba(24, 33, 47, 0.08);
 }
 
-.node.host {
+.network-node-card.selected {
+  outline: 3px solid rgba(49, 95, 157, 0.28);
+}
+
+.network-node-card.host {
   border-color: #2f7d57;
   background: #eef8f2;
 }
 
-.node.switch {
+.network-node-card.switch {
   border-color: #8a6424;
   background: #fff7e6;
 }
 
-.node.router {
+.network-node-card.router {
   border-color: #315f9d;
   background: #eef5ff;
 }
 
-.link {
-  width: 64px;
-  height: 4px;
-  background: #5e6b7a;
+.node-title {
+  font-weight: 750;
+  text-align: center;
+}
+
+.node-kind {
+  color: #526071;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.node-interfaces {
+  display: grid;
+  gap: 3px;
+  min-height: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
+  text-align: center;
+}
+
+.link-edge {
+  stroke: #5e6b7a;
+  stroke-width: 2.5;
+}
+
+.link-edge.selected {
+  stroke: #315f9d;
+  stroke-width: 4;
+}
+
+.link-edge-label {
+  position: absolute;
+  border: 1px solid #c5cdd9;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: #ffffff;
+  color: #394657;
+  font-size: 11px;
+  pointer-events: all;
 }
 
 .inspector table {
@@ -209,6 +244,16 @@ dd {
 .inspector p {
   margin: 0;
   font-size: 14px;
+}
+
+.danger-button {
+  border-color: #c55858;
+  color: #8f2525;
+}
+
+.danger-button:hover {
+  border-color: #8f2525;
+  background: #fff1f1;
 }
 
 .simulation-panel {
@@ -258,7 +303,7 @@ dd {
     border-bottom: 1px solid #d8dde6;
   }
 
-  .topology-preview {
-    justify-content: flex-start;
+  .canvas {
+    min-height: 420px;
   }
 }

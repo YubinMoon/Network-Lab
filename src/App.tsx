@@ -1,7 +1,15 @@
+import '@xyflow/react/dist/style.css'
 import './App.css'
+import { NetworkCanvas } from './components/canvas/NetworkCanvas'
+import { Inspector } from './components/inspector/Inspector'
+import { useLabStore } from './store/useLabStore'
+import type { NodeType } from './domain/types'
 
-const paletteItems = ['Host', 'Switch', 'Router', 'Link']
-const topologyNodes = ['Host A', 'Switch S1', 'Router R1', 'Switch S2', 'Host B']
+const paletteItems: Array<{ label: string; type: NodeType }> = [
+  { label: 'Host', type: 'host' },
+  { label: 'Switch', type: 'switch' },
+  { label: 'Router', type: 'router' },
+]
 const simulationTabs = [
   'Timeline',
   'Event Log',
@@ -11,6 +19,15 @@ const simulationTabs = [
 ]
 
 function App() {
+  const addNode = useLabStore((state) => state.addNode)
+  const clearTopology = useLabStore((state) => state.clearTopology)
+  const loadFirstMilestoneTopology = useLabStore(
+    (state) => state.loadFirstMilestoneTopology,
+  )
+  const defaultTtl = useLabStore(
+    (state) => state.topology.settings.defaultTtl,
+  )
+
   return (
     <main className="lab-shell">
       <header className="top-bar">
@@ -29,10 +46,22 @@ function App() {
           <h2>Palette</h2>
           <div className="tool-list">
             {paletteItems.map((item) => (
-              <button type="button" key={item}>
-                {item}
+              <button
+                type="button"
+                key={item.type}
+                onClick={() => addNode(item.type)}
+              >
+                {item.label}
               </button>
             ))}
+          </div>
+          <div className="topology-actions">
+            <button type="button" onClick={loadFirstMilestoneTopology}>
+              Load First Milestone
+            </button>
+            <button type="button" onClick={clearTopology}>
+              Clear
+            </button>
           </div>
           <div className="packet-tool">
             <h2>Packet Generator</h2>
@@ -43,7 +72,7 @@ function App() {
               </div>
               <div>
                 <dt>TTL</dt>
-                <dd>64</dd>
+                <dd>{defaultTtl}</dd>
               </div>
             </dl>
           </div>
@@ -54,51 +83,10 @@ function App() {
             <span>Network Segment</span>
             <span>Auto Configuration: On</span>
           </div>
-          <div className="topology-preview" aria-label="First Milestone Topology">
-            {topologyNodes.map((node, index) => (
-              <div className="topology-step" key={node}>
-                <div className={`node ${node.split(' ')[0].toLowerCase()}`}>
-                  {node}
-                </div>
-                {index < topologyNodes.length - 1 ? (
-                  <div className="link" aria-label="Link" />
-                ) : null}
-              </div>
-            ))}
-          </div>
+          <NetworkCanvas />
         </section>
 
-        <aside className="inspector" aria-label="Inspector">
-          <h2>Inspector</h2>
-          <section>
-            <h3>Selection</h3>
-            <p>Router R1</p>
-          </section>
-          <section>
-            <h3>Routing Table</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Destination</th>
-                  <th>Prefix</th>
-                  <th>Type</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>10.0.1.0</td>
-                  <td>/24</td>
-                  <td>Connected</td>
-                </tr>
-                <tr>
-                  <td>10.0.2.0</td>
-                  <td>/24</td>
-                  <td>Connected</td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
-        </aside>
+        <Inspector />
       </section>
 
       <section className="simulation-panel" aria-label="Simulation Panel">
@@ -117,9 +105,7 @@ function App() {
           ))}
         </div>
         <ol className="event-log" aria-label="Event Log">
-          <li>Host A ARP Cache miss for 10.0.1.1.</li>
-          <li>Switch S1 learned source MAC on ingress port.</li>
-          <li>Router R1 selected route by Longest Prefix Match.</li>
+          <li>Simulation idle.</li>
         </ol>
       </section>
     </main>

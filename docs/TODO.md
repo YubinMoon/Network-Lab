@@ -14,10 +14,11 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Created project TODO tracking and documented TODO/git workflow in `AGENTS.md`.
 - 2026-05-14: Completed Phase 0 project bootstrap with Vite, React, TypeScript strict mode, Vitest, baseline folders, and passing test/build checks.
 - 2026-05-14: Completed Phase 1 domain data model plus IPv4, MAC, and validation utilities with unit tests.
+- 2026-05-14: Completed Phase 2 topology store and React Flow editor with Host, Switch, Router, Link, selection, deletion, and Inspector support.
 
 ## In Progress
 
-- Phase 2: Topology store and basic editor.
+- Phase 3: Network Segment detection.
 
 ## Planned Work
 
@@ -42,10 +43,10 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ### Phase 2. Topology Store and Basic Editor
 
-- [ ] Add global lab state store.
-- [ ] Add canvas editor with `Host`, `Switch`, `Router`, and `Link`.
-- [ ] Add basic inspector for selected objects.
-- [ ] Verify the first target topology can be created visually.
+- [x] Add global lab state store.
+- [x] Add canvas editor with `Host`, `Switch`, `Router`, and `Link`.
+- [x] Add basic inspector for selected objects.
+- [x] Verify the first target topology can be created visually.
 
 ### Phase 3. Network Segment Detection
 
