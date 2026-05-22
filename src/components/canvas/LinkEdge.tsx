@@ -25,6 +25,16 @@ export function LinkEdge({
     targetY,
     targetPosition,
   })
+  const [reverseEdgePath] = getBezierPath({
+    sourceX: targetX,
+    sourceY: targetY,
+    sourcePosition: targetPosition,
+    targetX: sourceX,
+    targetY: sourceY,
+    targetPosition: sourcePosition,
+  })
+  const animationPath =
+    data?.direction === 'target-to-source' ? reverseEdgePath : edgePath
 
   return (
     <>
@@ -35,7 +45,7 @@ export function LinkEdge({
       />
       {data?.active ? (
         <circle className="link-packet-dot" r="5">
-          <animateMotion dur="900ms" repeatCount="indefinite" path={edgePath} />
+          <animateMotion dur="900ms" repeatCount="indefinite" path={animationPath} />
         </circle>
       ) : null}
       <EdgeLabelRenderer>

@@ -204,7 +204,10 @@ function simulateIpv4PacketInternal(
     eventBuilder.add('arp-request-sent', sourceHost.id, {
       description: `${sourceHost.name} sent ARP Request for ${arpTarget.targetIp}.`,
       packetId,
-      details: { targetIp: arpTarget.targetIp },
+      details: {
+        sourceInterfaceId: sourceInterface.id,
+        targetIp: arpTarget.targetIp,
+      },
     })
     addSwitchForwardingEvents({
       topology,
@@ -267,7 +270,11 @@ function simulateIpv4PacketInternal(
     eventBuilder.add('packet-delivered', nextHopInterface.node.id, {
       description: `${nextHopInterface.node.name} delivered IPv4 Datagram.`,
       packetId,
-      details: { datagram },
+      details: {
+        datagram,
+        sourceInterfaceId: sourceInterface.id,
+        deliveredInterfaceId: nextHopInterface.networkInterface.id,
+      },
     })
     return maybeReplyToIcmpEcho(
       topology,
@@ -360,6 +367,8 @@ function forwardThroughRouters(
         details: {
           datagram: routerResult.datagram,
           ethernetFrame: routerResult.frame,
+          sourceInterfaceId: routerResult.outInterface?.id,
+          deliveredInterfaceId: destinationInterface.networkInterface.id,
         },
       })
       return maybeReplyToIcmpEcho(
@@ -492,7 +501,10 @@ function forwardAtRouterWithEvents(
       eventBuilder.add('arp-request-sent', router.id, {
         description: `${router.name} sent ARP Request for ${result.nextHopIp}.`,
         packetId: datagram.id,
-        details: { targetIp: result.nextHopIp },
+        details: {
+          sourceInterfaceId: result.outInterface.id,
+          targetIp: result.nextHopIp,
+        },
       })
       addSwitchForwardingEvents({
         topology,
@@ -595,6 +607,8 @@ function addArpReplyAndCacheEvents({
     details: {
       ipAddress: targetIp,
       macAddress: responder.networkInterface.macAddress,
+      sourceInterfaceId: responder.networkInterface.id,
+      requesterInterfaceId: requesterInterface.id,
     },
   })
   addSwitchForwardingEvents({
@@ -670,12 +684,17 @@ function addSwitchForwardingEvents({
     eventBuilder.add('switch-frame-received', switchNode.id, {
       description: `${switchNode.name} received Ethernet Frame on ${ingressInterface.name}.`,
       packetId,
-      details: { ingressInterfaceId: ingressInterface.id },
+      details: {
+        ingressInterfaceId: ingressInterface.id,
+        sourceInterfaceId: sourceInterface.id,
+      },
     })
     eventBuilder.add('switch-source-mac-learned', switchNode.id, {
       description: `${switchNode.name} learned source MAC ${sourceMac}.`,
       packetId,
       details: {
+        ingressInterfaceId: ingressInterface.id,
+        sourceInterfaceId: sourceInterface.id,
         macAddress: sourceMac,
         portInterfaceId: ingressInterface.id,
         macAddressTable: [learnedEntry],
@@ -686,13 +705,17 @@ function addSwitchForwardingEvents({
       eventBuilder.add('switch-broadcast-flooded', switchNode.id, {
         description: `${switchNode.name} flooded broadcast Ethernet Frame.`,
         packetId,
-        details: { egressInterfaceIds },
+        details: {
+          ingressInterfaceId: ingressInterface.id,
+          egressInterfaceIds,
+        },
       })
     } else {
       eventBuilder.add('switch-known-unicast-forwarded', switchNode.id, {
         description: `${switchNode.name} forwarded known unicast Ethernet Frame.`,
         packetId,
         details: {
+          ingressInterfaceId: ingressInterface.id,
           destinationMac,
           egressInterfaceIds,
         },

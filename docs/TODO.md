@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-22: Completed directional `Link` packet animation so reverse traffic renders from target to source, with focused tests and browser verification.
 - 2026-05-14: Created project TODO tracking and documented TODO/git workflow in `AGENTS.md`.
 - 2026-05-14: Completed Phase 0 project bootstrap with Vite, React, TypeScript strict mode, Vitest, baseline folders, and passing test/build checks.
 - 2026-05-14: Completed Phase 1 domain data model plus IPv4, MAC, and validation utilities with unit tests.

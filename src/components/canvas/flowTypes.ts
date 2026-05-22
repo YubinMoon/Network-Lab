@@ -1,5 +1,6 @@
 import type { Edge, Node } from '@xyflow/react'
 import type { NodeType } from '../../domain/types'
+import type { LinkAnimationDirection } from './linkAnimation'
 
 export interface LabNodeData extends Record<string, unknown> {
   label: string
@@ -12,6 +13,7 @@ export interface LabEdgeData extends Record<string, unknown> {
   label: string
   status: string
   active: boolean
+  direction: LinkAnimationDirection
 }
 
 export type LabFlowNode = Node<LabNodeData, NodeType>
