@@ -140,28 +140,15 @@ export function linkAnimationsForEvent(
     const sourceInterfaceId =
       stringDetail(event.details, 'sourceInterfaceId') ??
       interfaceForActorAndTargetIp(topology, context, event.actorNodeId, stringDetail(event.details, 'targetIp'))
-    const targetInterfaceId = interfaceByIp(context, stringDetail(event.details, 'targetIp'))
-      ?.networkInterface.id
 
-    if (targetInterfaceId) {
-      addPathMovement(sourceInterfaceId, targetInterfaceId)
-    } else {
-      addOutboundMovement(sourceInterfaceId)
-    }
-
+    addOutboundMovement(sourceInterfaceId)
     return animations
   }
 
   if (event.type === 'arp-reply-sent') {
     const sourceInterfaceId = stringDetail(event.details, 'sourceInterfaceId')
-    const requesterInterfaceId = stringDetail(event.details, 'requesterInterfaceId')
 
-    if (requesterInterfaceId) {
-      addPathMovement(sourceInterfaceId, requesterInterfaceId)
-    } else {
-      addOutboundMovement(sourceInterfaceId)
-    }
-
+    addOutboundMovement(sourceInterfaceId)
     return animations
   }
 
