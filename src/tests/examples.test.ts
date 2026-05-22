@@ -48,4 +48,37 @@ describe('Example topologies', () => {
       expect(trace.events.length, example.name).toBeGreaterThan(0)
     }
   })
+
+  test('each example lays out linked nodes far enough apart', () => {
+    for (const example of EXAMPLE_TOPOLOGIES) {
+      const nodeById = new Map(
+        example.topology.nodes.map((node) => [node.id, node]),
+      )
+      const positions = example.topology.nodes.map(
+        (node) => `${node.position.x},${node.position.y}`,
+      )
+
+      expect(new Set(positions).size, example.name).toBe(positions.length)
+
+      for (const link of example.topology.links) {
+        const sourceNode = nodeById.get(link.endpointA.nodeId)
+        const targetNode = nodeById.get(link.endpointB.nodeId)
+
+        expect(sourceNode, `${example.name} ${link.id}`).toBeTruthy()
+        expect(targetNode, `${example.name} ${link.id}`).toBeTruthy()
+
+        if (!sourceNode || !targetNode) {
+          continue
+        }
+
+        expect(
+          Math.hypot(
+            sourceNode.position.x - targetNode.position.x,
+            sourceNode.position.y - targetNode.position.y,
+          ),
+          `${example.name} ${link.id}`,
+        ).toBeGreaterThanOrEqual(180)
+      }
+    }
+  })
 })

@@ -8,8 +8,9 @@ import {
   type EdgeTypes,
   type NodeChange,
   type NodeTypes,
+  useReactFlow,
 } from '@xyflow/react'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useLabStore } from '../../store/useLabStore'
 import { HostNode } from './HostNode'
 import { LinkEdge } from './LinkEdge'
@@ -30,6 +31,14 @@ const edgeTypes = {
 } satisfies EdgeTypes
 
 export function NetworkCanvas() {
+  return (
+    <ReactFlowProvider>
+      <NetworkCanvasFlow />
+    </ReactFlowProvider>
+  )
+}
+
+function NetworkCanvasFlow() {
   const topology = useLabStore((state) => state.topology)
   const selectedObject = useLabStore((state) => state.selectedObject)
   const addLink = useLabStore((state) => state.addLink)
@@ -39,6 +48,8 @@ export function NetworkCanvas() {
   const clearSelection = useLabStore((state) => state.clearSelection)
   const simulationTrace = useLabStore((state) => state.simulationTrace)
   const currentEventIndex = useLabStore((state) => state.currentEventIndex)
+  const canvasFitRequestId = useLabStore((state) => state.canvasFitRequestId)
+  const { fitView } = useReactFlow()
   const currentEvent = simulationTrace?.events[currentEventIndex]
   const linkAnimations = useMemo(
     () => linkAnimationsForEvent(topology, currentEvent),
@@ -103,26 +114,36 @@ export function NetworkCanvas() {
     [moveNode],
   )
 
+  useEffect(() => {
+    if (flowNodes.length === 0 || canvasFitRequestId === 0) {
+      return
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      void fitView({ padding: 0.2 })
+    })
+
+    return () => window.cancelAnimationFrame(animationFrame)
+  }, [canvasFitRequestId, fitView, flowNodes.length])
+
   return (
-    <ReactFlowProvider>
-      <ReactFlow
-        nodes={flowNodes}
-        edges={flowEdges}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        onConnect={onConnect}
-        onNodesChange={onNodesChange}
-        onNodeClick={(_, node) => selectNode(node.id)}
-        onEdgeClick={(_, edge) => selectLink(edge.id)}
-        onPaneClick={clearSelection}
-        fitView
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background />
-        <Controls />
-        <MiniMap pannable zoomable />
-        <PacketToken />
-      </ReactFlow>
-    </ReactFlowProvider>
+    <ReactFlow
+      nodes={flowNodes}
+      edges={flowEdges}
+      nodeTypes={nodeTypes}
+      edgeTypes={edgeTypes}
+      onConnect={onConnect}
+      onNodesChange={onNodesChange}
+      onNodeClick={(_, node) => selectNode(node.id)}
+      onEdgeClick={(_, edge) => selectLink(edge.id)}
+      onPaneClick={clearSelection}
+      fitView
+      proOptions={{ hideAttribution: true }}
+    >
+      <Background />
+      <Controls />
+      <MiniMap pannable zoomable />
+      <PacketToken />
+    </ReactFlow>
   )
 }

@@ -45,6 +45,7 @@ interface LabStoreState {
   simulationStatus: SimulationStatus
   currentEventIndex: number
   simulationSpeed: number
+  canvasFitRequestId: number
   lastExportJson: string
   lastShareUrl: string
   addNode: (type: NodeType) => void
@@ -90,6 +91,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   simulationStatus: 'idle',
   currentEventIndex: 0,
   simulationSpeed: 1,
+  canvasFitRequestId: 0,
   lastExportJson: '',
   lastShareUrl: '',
 
@@ -465,7 +467,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
         })
       : null
 
-    set({
+    set((state) => ({
       topology: simulationTrace
         ? applySimulationTraceToTopology(topology, simulationTrace)
         : topology,
@@ -473,7 +475,8 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       simulationTrace,
       simulationStatus: simulationTrace ? 'paused' : 'idle',
       currentEventIndex: 0,
-    })
+      canvasFitRequestId: state.canvasFitRequestId + 1,
+    }))
   },
 }))
 

@@ -1,5 +1,6 @@
 import {
   DEFAULT_LAB_SETTINGS,
+  type CanvasPosition,
   type HostNode,
   type InterfaceId,
   type LinkEndpoint,
@@ -18,6 +19,9 @@ export interface ExampleTopology {
   topology: TopologyState
   packet: PacketGeneratorInput
 }
+
+const EXAMPLE_NODE_SPACING_X = 220
+const EXAMPLE_NODE_Y = 120
 
 export const EXAMPLE_TOPOLOGIES: ExampleTopology[] = [
   {
@@ -206,10 +210,20 @@ function topologyState(
   links: NetworkLink[],
 ): TopologyState {
   return {
-    nodes,
+    nodes: nodes.map((node, index) => ({
+      ...node,
+      position: exampleNodePosition(index),
+    })),
     links,
     segments: [],
     settings: DEFAULT_LAB_SETTINGS,
+  }
+}
+
+function exampleNodePosition(index: number): CanvasPosition {
+  return {
+    x: 80 + index * EXAMPLE_NODE_SPACING_X,
+    y: EXAMPLE_NODE_Y,
   }
 }
 
