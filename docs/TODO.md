@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-25: Completed active Link packet inspection so selecting a moving Link shows Ethernet, ARP, IPv4, ICMP, and payload details in the Inspector, with regression tests and browser verification.
 - 2026-05-25: Completed Host source-interface selection so multi-interface Hosts send through the interface that matches the destination subnet, with regression tests and browser verification.
 - 2026-05-25: Completed loaded example link/interface normalization so adding Host C to Host B creates Host B eth1 and keeps Host C outside the switch broadcast domain, with regression tests and browser verification.
 - 2026-05-25: Completed selected-node highlight and Host multi-interface link handling so additional Host links create separate interfaces and L2 segments, with regression tests and browser verification.

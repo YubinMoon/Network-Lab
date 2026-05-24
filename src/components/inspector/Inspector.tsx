@@ -1,7 +1,14 @@
 import { useLabStore } from '../../store/useLabStore'
 import { applySimulationTraceToTopology } from '../../domain/dynamicTables'
-import type { NetworkInterface, NetworkLink, NetworkNode } from '../../domain/types'
+import type {
+  NetworkInterface,
+  NetworkLink,
+  NetworkNode,
+  SimulationEvent,
+  TopologyState,
+} from '../../domain/types'
 import { ValidationPanel } from './ValidationPanel'
+import { LinkPacketDetails } from './LinkPacketDetails'
 
 export function Inspector() {
   const topology = useLabStore((state) => state.topology)
@@ -64,7 +71,12 @@ export function Inspector() {
         />
       ) : null}
       {selectedLink ? (
-        <LinkInspector link={selectedLink} nodes={inspectedTopology.nodes} />
+        <LinkInspector
+          link={selectedLink}
+          topology={inspectedTopology}
+          nodes={inspectedTopology.nodes}
+          currentEvent={currentEvent}
+        />
       ) : null}
       <SegmentSummary segments={inspectedTopology.segments} />
       {selectedObject ? (
@@ -359,40 +371,52 @@ function InterfaceTable({
 
 function LinkInspector({
   link,
+  topology,
   nodes,
+  currentEvent,
 }: {
   link: NetworkLink
+  topology: TopologyState
   nodes: NetworkNode[]
+  currentEvent: SimulationEvent | undefined
 }) {
   const endpointA = endpointName(link.endpointA.nodeId, nodes)
   const endpointB = endpointName(link.endpointB.nodeId, nodes)
 
   return (
-    <section>
-      <h3>Link</h3>
-      <dl>
-        <div>
-          <dt>Endpoint A</dt>
-          <dd>{endpointA}</dd>
-        </div>
-        <div>
-          <dt>Endpoint B</dt>
-          <dd>{endpointB}</dd>
-        </div>
-        <div>
-          <dt>Status</dt>
-          <dd>{link.status}</dd>
-        </div>
-        <div>
-          <dt>Delay</dt>
-          <dd>{link.delayMs} ms</dd>
-        </div>
-        <div>
-          <dt>Loss Rate</dt>
-          <dd>{link.lossRate}</dd>
-        </div>
-      </dl>
-    </section>
+    <>
+      <section>
+        <h3>Link</h3>
+        <dl>
+          <div>
+            <dt>Endpoint A</dt>
+            <dd>{endpointA}</dd>
+          </div>
+          <div>
+            <dt>Endpoint B</dt>
+            <dd>{endpointB}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>{link.status}</dd>
+          </div>
+          <div>
+            <dt>Delay</dt>
+            <dd>{link.delayMs} ms</dd>
+          </div>
+          <div>
+            <dt>Loss Rate</dt>
+            <dd>{link.lossRate}</dd>
+          </div>
+        </dl>
+      </section>
+      <LinkPacketDetails
+        topology={topology}
+        link={link}
+        nodes={nodes}
+        currentEvent={currentEvent}
+      />
+    </>
   )
 }
 

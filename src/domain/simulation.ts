@@ -1,4 +1,9 @@
-import { findArpCacheEntry, selectHostArpTarget } from './arp'
+import {
+  createArpReplyFrame,
+  createArpRequestFrame,
+  findArpCacheEntry,
+  selectHostArpTarget,
+} from './arp'
 import {
   createIcmpEchoReply,
   createIcmpEchoRequest,
@@ -203,6 +208,13 @@ function simulateIpv4PacketInternal(
       },
     })
   } else {
+    const arpRequestFrame = createArpRequestFrame({
+      frameId: `${packetId}-arp-request`,
+      senderIp: sourceInterface.ipAddress,
+      senderMac: sourceInterface.macAddress,
+      targetIp: arpTarget.targetIp,
+    })
+
     eventBuilder.add('arp-cache-miss', sourceHost.id, {
       description: `${sourceHost.name} ARP Cache miss for ${arpTarget.targetIp}.`,
       packetId,
@@ -211,7 +223,9 @@ function simulateIpv4PacketInternal(
     eventBuilder.add('arp-request-sent', sourceHost.id, {
       description: `${sourceHost.name} sent ARP Request for ${arpTarget.targetIp}.`,
       packetId,
+      frameId: arpRequestFrame.id,
       details: {
+        ethernetFrame: arpRequestFrame,
         sourceInterfaceId: sourceInterface.id,
         targetIp: arpTarget.targetIp,
       },
@@ -220,8 +234,7 @@ function simulateIpv4PacketInternal(
       topology,
       segmentId: sourceInterface.segmentId,
       sourceInterface,
-      sourceMac: sourceInterface.macAddress,
-      destinationMac: BROADCAST_MAC,
+      ethernetFrame: arpRequestFrame,
       packetId,
       eventBuilder,
     })
@@ -262,13 +275,19 @@ function simulateIpv4PacketInternal(
       eventBuilder,
     })
   }
+  const outboundFrame = createIpv4Frame({
+    frameId: 'frame-1',
+    srcMac: sourceInterface.macAddress,
+    dstMac:
+      cachedArpEntry?.macAddress ?? nextHopInterface.networkInterface.macAddress,
+    datagram,
+  })
+
   addSwitchForwardingEvents({
     topology,
     segmentId: sourceInterface.segmentId,
     sourceInterface,
-    sourceMac: sourceInterface.macAddress,
-    destinationMac:
-      cachedArpEntry?.macAddress ?? nextHopInterface.networkInterface.macAddress,
+    ethernetFrame: outboundFrame,
     packetId,
     eventBuilder,
   })
@@ -277,8 +296,10 @@ function simulateIpv4PacketInternal(
     eventBuilder.add('packet-delivered', nextHopInterface.node.id, {
       description: `${nextHopInterface.node.name} delivered IPv4 Datagram.`,
       packetId,
+      frameId: outboundFrame.id,
       details: {
         datagram,
+        ethernetFrame: outboundFrame,
         sourceInterfaceId: sourceInterface.id,
         deliveredInterfaceId: nextHopInterface.networkInterface.id,
       },
@@ -518,6 +539,13 @@ function forwardAtRouterWithEvents(
         },
       })
     } else {
+      const arpRequestFrame = createArpRequestFrame({
+        frameId: `${datagram.id}-arp-request`,
+        senderIp: result.outInterface.ipAddress ?? '0.0.0.0',
+        senderMac: result.outInterface.macAddress,
+        targetIp: result.nextHopIp,
+      })
+
       eventBuilder.add('arp-cache-miss', router.id, {
         description: `${router.name} ARP Cache miss for ${result.nextHopIp}.`,
         packetId: datagram.id,
@@ -526,7 +554,9 @@ function forwardAtRouterWithEvents(
       eventBuilder.add('arp-request-sent', router.id, {
         description: `${router.name} sent ARP Request for ${result.nextHopIp}.`,
         packetId: datagram.id,
+        frameId: arpRequestFrame.id,
         details: {
+          ethernetFrame: arpRequestFrame,
           sourceInterfaceId: result.outInterface.id,
           targetIp: result.nextHopIp,
         },
@@ -535,8 +565,7 @@ function forwardAtRouterWithEvents(
         topology,
         segmentId: result.outInterface.segmentId,
         sourceInterface: result.outInterface,
-        sourceMac: result.outInterface.macAddress,
-        destinationMac: BROADCAST_MAC,
+        ethernetFrame: arpRequestFrame,
         packetId: datagram.id,
         eventBuilder,
       })
@@ -592,15 +621,17 @@ function forwardAtRouterWithEvents(
     description: `${router.name} forwarded frame out ${result.outInterface?.name}.`,
     packetId: datagram.id,
     frameId: result.frame?.id,
-    details: { outInterfaceId: result.outInterface?.id },
+    details: {
+      ethernetFrame: result.frame,
+      outInterfaceId: result.outInterface?.id,
+    },
   })
   if (result.outInterface && result.frame) {
     addSwitchForwardingEvents({
       topology,
       segmentId: result.outInterface.segmentId,
       sourceInterface: result.outInterface,
-      sourceMac: result.frame.srcMac,
-      destinationMac: result.frame.dstMac,
+      ethernetFrame: result.frame,
       packetId: datagram.id,
       eventBuilder,
     })
@@ -626,10 +657,20 @@ function addArpReplyAndCacheEvents({
   packetId: string
   eventBuilder: ReturnType<typeof createEventBuilder>
 }) {
+  const arpReplyFrame = createArpReplyFrame({
+    frameId: `${packetId}-arp-reply`,
+    senderIp: targetIp,
+    senderMac: responder.networkInterface.macAddress,
+    targetIp: requesterInterface.ipAddress ?? '0.0.0.0',
+    targetMac: requesterInterface.macAddress,
+  })
+
   eventBuilder.add('arp-reply-sent', responder.node.id, {
     description: `${responder.node.name} sent ARP Reply for ${targetIp}.`,
     packetId,
+    frameId: arpReplyFrame.id,
     details: {
+      ethernetFrame: arpReplyFrame,
       ipAddress: targetIp,
       macAddress: responder.networkInterface.macAddress,
       sourceInterfaceId: responder.networkInterface.id,
@@ -640,8 +681,7 @@ function addArpReplyAndCacheEvents({
     topology,
     segmentId: requesterInterface.segmentId,
     sourceInterface: responder.networkInterface,
-    sourceMac: responder.networkInterface.macAddress,
-    destinationMac: requesterInterface.macAddress,
+    ethernetFrame: arpReplyFrame,
     packetId,
     eventBuilder,
   })
@@ -660,16 +700,14 @@ function addSwitchForwardingEvents({
   topology,
   segmentId,
   sourceInterface,
-  sourceMac,
-  destinationMac,
+  ethernetFrame,
   packetId,
   eventBuilder,
 }: {
   topology: TopologyState
   segmentId?: SegmentId
   sourceInterface: NetworkInterface
-  sourceMac: string
-  destinationMac: string
+  ethernetFrame: EthernetFrame
   packetId: string
   eventBuilder: ReturnType<typeof createEventBuilder>
 }) {
@@ -677,6 +715,8 @@ function addSwitchForwardingEvents({
     return
   }
 
+  const sourceMac = ethernetFrame.srcMac
+  const destinationMac = ethernetFrame.dstMac
   const destinationInterface =
     destinationMac === BROADCAST_MAC
       ? undefined
@@ -716,14 +756,16 @@ function addSwitchForwardingEvents({
         macAddressTable: eventBuilder.switchMacTable(switchNode),
       },
       ingressInterface.id,
-      switchFrame(packetId, sourceMac, destinationMac),
+      ethernetFrame,
     )
     eventBuilder.setSwitchMacTable(switchNode.id, decision.macAddressTable)
 
     eventBuilder.add('switch-frame-received', switchNode.id, {
       description: `${switchNode.name} received Ethernet Frame on ${ingressInterface.name}.`,
       packetId,
+      frameId: ethernetFrame.id,
       details: {
+        ethernetFrame,
         ingressInterfaceId: ingressInterface.id,
         sourceInterfaceId: sourceInterface.id,
       },
@@ -731,7 +773,9 @@ function addSwitchForwardingEvents({
     eventBuilder.add('switch-source-mac-learned', switchNode.id, {
       description: `${switchNode.name} learned source MAC ${sourceMac}.`,
       packetId,
+      frameId: ethernetFrame.id,
       details: {
+        ethernetFrame,
         ingressInterfaceId: ingressInterface.id,
         sourceInterfaceId: sourceInterface.id,
         macAddress: sourceMac,
@@ -744,7 +788,9 @@ function addSwitchForwardingEvents({
       eventBuilder.add('switch-broadcast-flooded', switchNode.id, {
         description: `${switchNode.name} flooded broadcast Ethernet Frame.`,
         packetId,
+        frameId: ethernetFrame.id,
         details: {
+          ethernetFrame,
           ingressInterfaceId: ingressInterface.id,
           egressInterfaceIds: decision.egressInterfaceIds,
         },
@@ -753,7 +799,9 @@ function addSwitchForwardingEvents({
       eventBuilder.add('switch-unknown-unicast-flooded', switchNode.id, {
         description: `${switchNode.name} flooded unknown unicast Ethernet Frame.`,
         packetId,
+        frameId: ethernetFrame.id,
         details: {
+          ethernetFrame,
           ingressInterfaceId: ingressInterface.id,
           destinationMac,
           egressInterfaceIds: decision.egressInterfaceIds,
@@ -763,7 +811,9 @@ function addSwitchForwardingEvents({
       eventBuilder.add('switch-known-unicast-forwarded', switchNode.id, {
         description: `${switchNode.name} forwarded known unicast Ethernet Frame.`,
         packetId,
+        frameId: ethernetFrame.id,
         details: {
+          ethernetFrame,
           ingressInterfaceId: ingressInterface.id,
           destinationMac,
           egressInterfaceIds: decision.egressInterfaceIds,
@@ -817,25 +867,6 @@ function closestSwitchInterface(
       } => Boolean(candidate.path),
     )
     .sort((a, b) => a.path.length - b.path.length)[0]?.networkInterface
-}
-
-function switchFrame(
-  packetId: string,
-  sourceMac: string,
-  destinationMac: string,
-): EthernetFrame {
-  return {
-    id: `${packetId}-switch-frame`,
-    srcMac: sourceMac,
-    dstMac: destinationMac,
-    etherType: 'ARP',
-    payload: {
-      operation: 'request',
-      senderIp: '0.0.0.0',
-      senderMac: sourceMac,
-      targetIp: '0.0.0.0',
-    },
-  }
 }
 
 function packetDropBetweenInterfaces(

@@ -402,6 +402,34 @@ dd {
   font-size: 14px;
 }
 
+.link-packet-details {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.packet-header-block {
+  display: grid;
+  gap: 8px;
+}
+
+.packet-header-block h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.packet-data {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  border-radius: 4px;
+  padding: 2px 4px;
+  background: var(--surface-raised);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 12px;
+}
+
 .danger-button {
   border-color: var(--danger);
   color: var(--danger);

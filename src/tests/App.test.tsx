@@ -303,6 +303,65 @@ describe('App', () => {
     ).toBeInTheDocument()
   })
 
+  test('shows detailed packet headers for a selected active Link', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load Example' }))
+
+    const trace = useLabStore.getState().simulationTrace
+    const arpRequestIndex =
+      trace?.events.findIndex(
+        (event) =>
+          event.type === 'arp-request-sent' && event.actorNodeId === 'host-a',
+      ) ?? -1
+    const deliveredIndex =
+      trace?.events.findIndex(
+        (event) =>
+          event.type === 'packet-delivered' && event.actorNodeId === 'host-b',
+      ) ?? -1
+
+    expect(arpRequestIndex).toBeGreaterThanOrEqual(0)
+    expect(deliveredIndex).toBeGreaterThan(arpRequestIndex)
+
+    act(() => {
+      useLabStore.getState().selectLink('link-1')
+
+      for (let index = 0; index < arpRequestIndex; index += 1) {
+        useLabStore.getState().nextEvent()
+      }
+    })
+
+    let packetSection = sectionByHeading(
+      screen.getByLabelText('Inspector'),
+      'Packet on Link',
+    )
+
+    expect(within(packetSection).getByText('Ethernet Header')).toBeInTheDocument()
+    expect(within(packetSection).getByText('ARP Header')).toBeInTheDocument()
+    expect(within(packetSection).getByText('FF:FF:FF:FF:FF:FF')).toBeInTheDocument()
+    expect(within(packetSection).getByText('10.0.1.10')).toBeInTheDocument()
+    expect(within(packetSection).getByText('10.0.1.11')).toBeInTheDocument()
+
+    act(() => {
+      useLabStore.getState().selectLink('link-2')
+
+      for (let index = arpRequestIndex; index < deliveredIndex; index += 1) {
+        useLabStore.getState().nextEvent()
+      }
+    })
+
+    packetSection = sectionByHeading(
+      screen.getByLabelText('Inspector'),
+      'Packet on Link',
+    )
+
+    expect(within(packetSection).getByText('IPv4 Header')).toBeInTheDocument()
+    expect(within(packetSection).getByText('ICMP Header')).toBeInTheDocument()
+    expect(within(packetSection).getByText('ICMP (1)')).toBeInTheDocument()
+    expect(within(packetSection).getByText('Echo Request (8)')).toBeInTheDocument()
+    expect(within(packetSection).getByText('Hello')).toBeInTheDocument()
+  })
+
   test('does not keep hidden final ARP Cache entries after editing a loaded example', () => {
     render(<App />)
 
