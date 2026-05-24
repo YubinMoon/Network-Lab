@@ -116,7 +116,7 @@ function NetworkCanvasFlow() {
   )
 
   useEffect(() => {
-    if (flowNodes.length === 0 || canvasFitRequestId === 0) {
+    if (canvasFitRequestId === 0) {
       return
     }
 
@@ -125,7 +125,7 @@ function NetworkCanvasFlow() {
     })
 
     return () => window.cancelAnimationFrame(animationFrame)
-  }, [canvasFitRequestId, fitView, flowNodes.length])
+  }, [canvasFitRequestId, fitView])
 
   return (
     <ReactFlow

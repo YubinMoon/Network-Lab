@@ -58,4 +58,32 @@ describe('NetworkCanvas', () => {
       expect(reactFlowMock.fitView).toHaveBeenCalledWith({ padding: 0.2 })
     })
   })
+
+  test('does not replay a previous fit request when adding another node', async () => {
+    render(<NetworkCanvas />)
+
+    act(() => {
+      useLabStore.getState().loadFirstMilestoneTopology()
+    })
+
+    await waitFor(() => {
+      expect(reactFlowMock.fitView).toHaveBeenCalledTimes(1)
+    })
+
+    reactFlowMock.fitView.mockClear()
+
+    act(() => {
+      useLabStore.getState().addNode('host')
+    })
+
+    await nextAnimationFrame()
+
+    expect(reactFlowMock.fitView).not.toHaveBeenCalled()
+  })
 })
+
+function nextAnimationFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => resolve())
+  })
+}
