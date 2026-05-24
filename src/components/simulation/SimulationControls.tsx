@@ -40,14 +40,14 @@ export function SimulationControls() {
       >
         {playbackLabel}
       </button>
+      <button type="button" onClick={resetSimulation}>
+        Reset
+      </button>
       <button type="button" onClick={previousEvent}>
         Previous Event
       </button>
       <button type="button" onClick={nextEvent}>
         Next Event
-      </button>
-      <button type="button" onClick={resetSimulation}>
-        Reset
       </button>
       <button type="button" onClick={resetDynamicTables}>
         Reset Dynamic Tables

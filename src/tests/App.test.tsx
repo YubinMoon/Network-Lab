@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, test } from 'vitest'
 import App from '../App'
 import { useLabStore } from '../store/useLabStore'
@@ -62,8 +62,14 @@ describe('App', () => {
     render(<App />)
 
     const initialPlayButton = screen.getByRole('button', { name: 'Play' })
+    const controlButtons = within(
+      screen.getByLabelText('Simulation Controls'),
+    ).getAllByRole('button')
 
     expect(initialPlayButton).toHaveClass('play')
+    expect(controlButtons.slice(0, 2).map((button) => button.textContent)).toEqual(
+      ['Play', 'Reset'],
+    )
     expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument()
 
     fireEvent.click(
