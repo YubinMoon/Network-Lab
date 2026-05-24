@@ -9,6 +9,7 @@ import {
   createIpv4Frame,
   forwardIpv4FrameAtRouter,
 } from './ipv4'
+import { ipMatchesPrefix } from './ip'
 import { processSwitchFrame } from './l2'
 import { normalizeMac } from './mac'
 import { BROADCAST_MAC } from './types'
@@ -127,7 +128,9 @@ function simulateIpv4PacketInternal(
     (node): node is HostNode =>
       node.type === 'host' && node.id === input.sourceHostId,
   )
-  const sourceInterface = sourceHost?.interfaces[0]
+  const sourceInterface = sourceHost
+    ? selectSourceInterface(sourceHost, input.destinationIp)
+    : undefined
 
   if (!sourceHost || !sourceInterface?.ipAddress || !sourceInterface.prefixLength) {
     return droppedTrace(
@@ -309,6 +312,24 @@ function simulateIpv4PacketInternal(
     nextHopInterface.networkInterface,
     eventBuilder,
     options,
+  )
+}
+
+function selectSourceInterface(
+  sourceHost: HostNode,
+  destinationIp: string,
+): NetworkInterface | undefined {
+  return (
+    sourceHost.interfaces.find(
+      (networkInterface) =>
+        networkInterface.ipAddress &&
+        networkInterface.prefixLength !== undefined &&
+        ipMatchesPrefix(
+          destinationIp,
+          networkInterface.ipAddress,
+          networkInterface.prefixLength,
+        ),
+    ) ?? sourceHost.interfaces[0]
   )
 }
 

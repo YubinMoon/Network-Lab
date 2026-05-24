@@ -114,6 +114,38 @@ describe('IPv4 forwarding simulation', () => {
     )
   })
 
+  test('uses the Host interface that matches the destination subnet', () => {
+    const topology = applyAutoConfiguration(hostWithSeparateHostLinkTopology())
+    const trace = simulateIpv4Packet(topology, {
+      sourceHostId: 'host-b',
+      destinationIp: '10.0.2.11',
+      ttl: 64,
+      packetType: 'generic-ipv4',
+    })
+    const subnetCheckEvent = eventByType(trace.events, 'host-subnet-check')
+    const arpRequestEvent = eventByType(trace.events, 'arp-request-sent')
+    const deliveredEvent = eventByType(trace.events, 'packet-delivered')
+
+    expect(trace.result.status).toBe('delivered')
+    expect(subnetCheckEvent.details).toEqual(
+      expect.objectContaining({
+        sourceIp: '10.0.2.10',
+        prefixLength: 24,
+      }),
+    )
+    expect(arpRequestEvent.details).toEqual(
+      expect.objectContaining({
+        sourceInterfaceId: 'host-b-eth1',
+      }),
+    )
+    expect(deliveredEvent.details).toEqual(
+      expect.objectContaining({
+        sourceInterfaceId: 'host-b-eth1',
+        deliveredInterfaceId: 'host-c-eth0',
+      }),
+    )
+  })
+
   test('applies dynamic table events only through the selected event index', () => {
     const topology = applyAutoConfiguration(firstMilestoneTopology())
     const trace = simulateIpv4Packet(topology, {
@@ -310,6 +342,28 @@ function threeHostSwitchTopology(): TopologyState {
       link('link-1', endpoint(hostA, 'eth0'), endpoint(switchS1, 'e0/1')),
       link('link-2', endpoint(switchS1, 'e0/2'), endpoint(hostB, 'eth0')),
       link('link-3', endpoint(switchS1, 'e0/3'), endpoint(hostC, 'eth0')),
+    ],
+  )
+}
+
+function hostWithSeparateHostLinkTopology(): TopologyState {
+  const hostA = host('host-a', 'Host A')
+  const switchS1 = switchNode('switch-s1', 'Switch S1', ['e0/1', 'e0/2'])
+  const hostB = {
+    ...host('host-b', 'Host B'),
+    interfaces: [
+      networkInterface('host-b', 'eth0'),
+      networkInterface('host-b', 'eth1'),
+    ],
+  } satisfies HostNode
+  const hostC = host('host-c', 'Host C')
+
+  return topologyState(
+    [hostA, switchS1, hostB, hostC],
+    [
+      link('link-1', endpoint(hostA, 'eth0'), endpoint(switchS1, 'e0/1')),
+      link('link-2', endpoint(switchS1, 'e0/2'), endpoint(hostB, 'eth0')),
+      link('link-3', endpoint(hostB, 'eth1'), endpoint(hostC, 'eth0')),
     ],
   )
 }
