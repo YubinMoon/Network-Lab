@@ -85,6 +85,31 @@ const emptyTopology = (): TopologyState => ({
   settings: DEFAULT_LAB_SETTINGS,
 })
 
+function topologyForCurrentEvent(state: LabStoreState): TopologyState {
+  if (!state.simulationBaseTopology || !state.simulationTrace) {
+    return state.topology
+  }
+
+  return applySimulationTraceToTopology(
+    state.simulationBaseTopology,
+    state.simulationTrace,
+    state.currentEventIndex,
+  )
+}
+
+function updateNodePosition(
+  topology: TopologyState,
+  nodeId: NodeId,
+  position: CanvasPosition,
+): TopologyState {
+  return {
+    ...topology,
+    nodes: topology.nodes.map((node) =>
+      node.id === nodeId ? { ...node, position } : node,
+    ),
+  }
+}
+
 export const useLabStore = create<LabStoreState>((set, get) => ({
   topology: emptyTopology(),
   selectedObject: null,
@@ -99,12 +124,13 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
 
   addNode: (type) => {
     set((state) => {
-      const node = createNode(type, state.topology.nodes)
+      const topology = topologyForCurrentEvent(state)
+      const node = createNode(type, topology.nodes)
 
       return {
         topology: applyAutoConfiguration({
-          ...state.topology,
-          nodes: [...state.topology.nodes, node],
+          ...topology,
+          nodes: [...topology.nodes, node],
         }),
         selectedObject: { kind: 'node', id: node.id },
         simulationTrace: null,
@@ -121,8 +147,10 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
     }
 
     set((state) => {
+      const topology = topologyForCurrentEvent(state)
+
       if (
-        state.topology.links.some((link) =>
+        topology.links.some((link) =>
           linksSameNodes(link, sourceNodeId, targetNodeId),
         )
       ) {
@@ -130,10 +158,10 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       }
 
       const linkId = `link-${nanoid(8)}`
-      const sourceNode = state.topology.nodes.find(
+      const sourceNode = topology.nodes.find(
         (node) => node.id === sourceNodeId,
       )
-      const targetNode = state.topology.nodes.find(
+      const targetNode = topology.nodes.find(
         (node) => node.id === targetNodeId,
       )
 
@@ -160,8 +188,8 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
 
       return {
         topology: applyAutoConfiguration({
-          ...state.topology,
-          nodes: state.topology.nodes.map((node) => {
+          ...topology,
+          nodes: topology.nodes.map((node) => {
             if (node.id === sourceNodeId) {
               return sourceUpdate.node
             }
@@ -172,7 +200,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
 
             return node
           }),
-          links: [...state.topology.links, link],
+          links: [...topology.links, link],
         }),
         selectedObject: { kind: 'link', id: link.id },
         simulationTrace: null,
@@ -185,18 +213,17 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
 
   moveNode: (nodeId, position) => {
     set((state) => ({
-      topology: {
-        ...state.topology,
-        nodes: state.topology.nodes.map((node) =>
-          node.id === nodeId ? { ...node, position } : node,
-        ),
-      },
+      topology: updateNodePosition(state.topology, nodeId, position),
+      simulationBaseTopology: state.simulationBaseTopology
+        ? updateNodePosition(state.simulationBaseTopology, nodeId, position)
+        : null,
     }))
   },
 
   removeNode: (nodeId) => {
     set((state) => {
-      const removedLinkIds = state.topology.links
+      const topology = topologyForCurrentEvent(state)
+      const removedLinkIds = topology.links
         .filter(
           (link) =>
             link.endpointA.nodeId === nodeId || link.endpointB.nodeId === nodeId,
@@ -206,11 +233,11 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
 
       return {
         topology: applyAutoConfiguration({
-          ...state.topology,
-          nodes: state.topology.nodes
+          ...topology,
+          nodes: topology.nodes
             .filter((node) => node.id !== nodeId)
             .map((node) => detachLinksFromNode(node, removedLinkSet)),
-          links: state.topology.links.filter(
+          links: topology.links.filter(
             (link) => !removedLinkSet.has(link.id),
           ),
         }),
@@ -224,20 +251,24 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   },
 
   removeLink: (linkId) => {
-    set((state) => ({
-      topology: applyAutoConfiguration({
-        ...state.topology,
-        nodes: state.topology.nodes.map((node) =>
-          detachLinksFromNode(node, new Set([linkId])),
-        ),
-        links: state.topology.links.filter((link) => link.id !== linkId),
-      }),
-      selectedObject: null,
-      simulationTrace: null,
-      simulationBaseTopology: null,
-      simulationStatus: 'idle',
-      currentEventIndex: 0,
-    }))
+    set((state) => {
+      const topology = topologyForCurrentEvent(state)
+
+      return {
+        topology: applyAutoConfiguration({
+          ...topology,
+          nodes: topology.nodes.map((node) =>
+            detachLinksFromNode(node, new Set([linkId])),
+          ),
+          links: topology.links.filter((link) => link.id !== linkId),
+        }),
+        selectedObject: null,
+        simulationTrace: null,
+        simulationBaseTopology: null,
+        simulationStatus: 'idle',
+        currentEventIndex: 0,
+      }
+    })
   },
 
   deleteSelection: () => {
@@ -297,12 +328,13 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   },
 
   clearSimulationTrace: () => {
-    set({
+    set((state) => ({
+      topology: topologyForCurrentEvent(state),
       simulationTrace: null,
       simulationBaseTopology: null,
       simulationStatus: 'idle',
       currentEventIndex: 0,
-    })
+    }))
   },
 
   loadFirstMilestoneTopology: () => {
@@ -317,7 +349,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   },
 
   sendPacket: (input) => {
-    const topology = get().topology
+    const topology = topologyForCurrentEvent(get())
     const destinationIp =
       input.destinationMode === 'host'
         ? hostIpAddress(topology, input.targetHostId)
@@ -393,7 +425,9 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   },
 
   exportTopologyJson: () => {
-    set((state) => ({ lastExportJson: topologyToJson(state.topology) }))
+    set((state) => ({
+      lastExportJson: topologyToJson(topologyForCurrentEvent(state)),
+    }))
   },
 
   importTopologyJson: (json) => {
@@ -412,7 +446,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   },
 
   saveTopology: () => {
-    saveTopologyToLocalStorage(get().topology)
+    saveTopologyToLocalStorage(topologyForCurrentEvent(get()))
   },
 
   loadTopology: () => {
@@ -433,7 +467,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   },
 
   createShareUrl: () => {
-    const hash = encodeTopologyHash(get().topology)
+    const hash = encodeTopologyHash(topologyForCurrentEvent(get()))
     const url =
       typeof window === 'undefined'
         ? hash

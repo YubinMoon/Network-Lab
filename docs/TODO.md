@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-24: Completed current-event topology editing so loading an example and editing before playback no longer leaks precomputed ARP Cache or MAC Address Table entries, with regression tests and browser verification.
 - 2026-05-24: Completed event-indexed Inspector dynamic tables so ARP Cache and MAC Address Table reflect the selected simulation event, with regression tests and browser verification.
 - 2026-05-24: Completed example MAC assignment fix and stopped presenting Layer 2 switch ports as endpoint MAC owners, with validation/UI regression tests and browser verification.
 - 2026-05-24: Completed playback control order update so `Reset` sits to the right of the `Play`/`Pause` toggle, with regression tests and browser verification.

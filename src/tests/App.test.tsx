@@ -174,6 +174,44 @@ describe('App', () => {
     ).toBeInTheDocument()
   })
 
+  test('does not keep hidden final ARP Cache entries after editing a loaded example', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load Example' }))
+
+    act(() => {
+      useLabStore.getState().addNode('host')
+    })
+
+    const newHostId = useLabStore
+      .getState()
+      .topology.nodes.find((node) => node.name === 'Host C')?.id
+
+    expect(newHostId).toBeTruthy()
+
+    act(() => {
+      useLabStore.getState().addLink(newHostId ?? '', 'switch-s1')
+      useLabStore.getState().selectNode('host-a')
+    })
+
+    const hostA = useLabStore
+      .getState()
+      .topology.nodes.find((node) => node.id === 'host-a')
+
+    expect(hostA?.type).toBe('host')
+
+    if (hostA?.type === 'host') {
+      expect(hostA.arpCache).toHaveLength(0)
+    }
+
+    const arpCacheSection = sectionByHeading(
+      screen.getByLabelText('Inspector'),
+      'ARP Cache',
+    )
+
+    expect(within(arpCacheSection).getByText('0 entries')).toBeInTheDocument()
+  })
+
   test('sends a packet from the Packet Generator', () => {
     render(<App />)
 
