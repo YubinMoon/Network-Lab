@@ -1,4 +1,5 @@
 import { lookupRoute } from './routing'
+import { fragmentIpv4Datagram } from './fragmentation'
 import type {
   EthernetFrame,
   IPv4Datagram,
@@ -16,6 +17,8 @@ export interface RouterForwardingResult {
   nextHopIp?: string
   outInterface?: NetworkInterface
   frame?: EthernetFrame
+  frames?: EthernetFrame[]
+  fragmentation?: ReturnType<typeof fragmentIpv4Datagram>
   reason?: PacketDropReason
 }
 
@@ -36,10 +39,14 @@ export function createIpv4Datagram({
 }): IPv4Datagram {
   return {
     id,
+    identification: id,
     srcIp,
     dstIp,
     ttl,
     protocol,
+    dontFragment: false,
+    moreFragments: false,
+    fragmentOffset: 0,
     payload,
   }
 }
@@ -70,12 +77,16 @@ export function forwardIpv4FrameAtRouter({
   frame,
   resolveMacForIp,
   frameId,
+  outMtu,
+  routeSelectionIndex,
 }: {
   router: RouterNode
   ingressInterfaceId: string
   frame: EthernetFrame
   resolveMacForIp: (ipAddress: string) => string | undefined
   frameId: string
+  outMtu?: number
+  routeSelectionIndex?: number
 }): RouterForwardingResult {
   const ingressInterface = router.interfaces.find(
     (networkInterface) => networkInterface.id === ingressInterfaceId,
@@ -109,7 +120,9 @@ export function forwardIpv4FrameAtRouter({
     }
   }
 
-  const routeLookup = lookupRoute(datagram.dstIp, router.routingTable)
+  const routeLookup = lookupRoute(datagram.dstIp, router.routingTable, {
+    selectionIndex: routeSelectionIndex,
+  })
   const selectedRoute = routeLookup.selectedRoute
 
   if (!selectedRoute) {
@@ -150,12 +163,32 @@ export function forwardIpv4FrameAtRouter({
     }
   }
 
-  const nextFrame = createIpv4Frame({
-    frameId,
-    srcMac: outInterface.macAddress,
-    dstMac: nextHopMac,
-    datagram: decrementedDatagram,
-  })
+  const fragmentation = outMtu
+    ? fragmentIpv4Datagram(decrementedDatagram, outMtu)
+    : undefined
+
+  if (fragmentation?.status === 'dropped') {
+    return {
+      status: 'dropped',
+      previousTtl,
+      datagram: decrementedDatagram,
+      selectedRoute,
+      nextHopIp,
+      outInterface,
+      fragmentation,
+      reason: fragmentation.reason,
+    }
+  }
+
+  const datagrams = fragmentation?.datagrams ?? [decrementedDatagram]
+  const frames = datagrams.map((fragmentDatagram, index) =>
+    createIpv4Frame({
+      frameId: datagrams.length === 1 ? frameId : `${frameId}-frag-${index + 1}`,
+      srcMac: outInterface.macAddress,
+      dstMac: nextHopMac,
+      datagram: fragmentDatagram,
+    }),
+  )
 
   return {
     status: 'forwarded',
@@ -164,6 +197,8 @@ export function forwardIpv4FrameAtRouter({
     selectedRoute,
     nextHopIp,
     outInterface,
-    frame: nextFrame,
+    frame: frames[0],
+    frames,
+    fragmentation,
   }
 }

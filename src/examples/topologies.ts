@@ -1,5 +1,6 @@
 import {
   DEFAULT_LAB_SETTINGS,
+  DEFAULT_LINK_MTU,
   type CanvasPosition,
   type HostNode,
   type InterfaceId,
@@ -42,6 +43,16 @@ export const EXAMPLE_TOPOLOGIES: ExampleTopology[] = [
     name: 'Router-to-Router Forwarding',
     topology: twoRouterTopology(),
     packet: hostPacket('host-a', 'host-b', 'icmp-echo'),
+  },
+  {
+    id: 'fragmentation-round-robin',
+    name: 'MTU Fragmentation and Round Robin',
+    topology: fragmentationRoundRobinTopology(),
+    packet: {
+      ...hostPacket('host-a', 'host-b', 'generic-ipv4'),
+      packetCount: 2,
+      payload: 'Fragmentation payload '.repeat(12),
+    },
   },
   {
     id: 'no-matching-route',
@@ -113,6 +124,57 @@ function twoRouterTopology(): TopologyState {
       link('link-3', endpoint(routerR1, 'g0/1'), endpoint(routerR2, 'g0/0')),
       link('link-4', endpoint(routerR2, 'g0/1'), endpoint(switchS2, 'e0/1')),
       link('link-5', endpoint(switchS2, 'e0/2'), endpoint(hostB, 'eth0')),
+    ],
+  )
+}
+
+function fragmentationRoundRobinTopology(): TopologyState {
+  const hostA = host('host-a', 'Host A')
+  const switchS1 = switchNode('switch-s1', 'Switch S1', ['e0/1', 'e0/2'])
+  const routerR1 = {
+    ...router('router-r1', 'Router R1', ['g0/0', 'g0/1', 'g0/2']),
+    routingTable: [
+      {
+        id: 'route-r1-manual-via-r2',
+        destinationNetwork: '10.0.2.0',
+        prefixLength: 24,
+        nextHopIp: '10.255.1.2',
+        outInterfaceId: 'router-r1-g0-1',
+        type: 'manual-static',
+        metric: 1,
+        enabled: true,
+      },
+      {
+        id: 'route-r1-manual-via-r3',
+        destinationNetwork: '10.0.2.0',
+        prefixLength: 24,
+        nextHopIp: '10.255.2.2',
+        outInterfaceId: 'router-r1-g0-2',
+        type: 'manual-static',
+        metric: 1,
+        enabled: true,
+      },
+    ],
+  } satisfies RouterNode
+  const routerR2 = router('router-r2', 'Router R2', ['g0/0', 'g0/1'])
+  const routerR3 = router('router-r3', 'Router R3', ['g0/0', 'g0/1'])
+  const switchS2 = switchNode('switch-s2', 'Switch S2', [
+    'e0/1',
+    'e0/2',
+    'e0/3',
+  ])
+  const hostB = host('host-b', 'Host B')
+
+  return topologyState(
+    [hostA, switchS1, routerR1, routerR2, routerR3, switchS2, hostB],
+    [
+      link('link-1', endpoint(hostA, 'eth0'), endpoint(switchS1, 'e0/1')),
+      link('link-2', endpoint(switchS1, 'e0/2'), endpoint(routerR1, 'g0/0')),
+      link('link-3', endpoint(routerR1, 'g0/1'), endpoint(routerR2, 'g0/0')),
+      link('link-4', endpoint(routerR1, 'g0/2'), endpoint(routerR3, 'g0/0')),
+      link('link-5', endpoint(routerR2, 'g0/1'), endpoint(switchS2, 'e0/1'), 80),
+      link('link-6', endpoint(routerR3, 'g0/1'), endpoint(switchS2, 'e0/2'), 120),
+      link('link-7', endpoint(switchS2, 'e0/3'), endpoint(hostB, 'eth0')),
     ],
   )
 }
@@ -213,6 +275,7 @@ function link(
   id: string,
   endpointA: LinkEndpoint,
   endpointB: LinkEndpoint,
+  mtu = DEFAULT_LINK_MTU,
 ): NetworkLink {
   return {
     id,
@@ -221,6 +284,7 @@ function link(
     status: 'up',
     delayMs: 100,
     lossRate: 0,
+    mtu,
   }
 }
 

@@ -9,6 +9,7 @@ const requiredExampleNames = [
   'Same LAN Communication',
   'Default Gateway Forwarding',
   'Router-to-Router Forwarding',
+  'MTU Fragmentation and Round Robin',
   'No Matching Route',
 ]
 
@@ -103,6 +104,59 @@ describe('Example topologies', () => {
         example.name,
       ).not.toContain('duplicate-mac-address')
     }
+  })
+
+  test('fragmentation example round-robins equal routes and emits fragment events', () => {
+    const example = EXAMPLE_TOPOLOGIES.find(
+      (candidate) => candidate.id === 'fragmentation-round-robin',
+    )
+
+    expect(example).toBeTruthy()
+
+    if (!example) {
+      return
+    }
+
+    const topology = applyAutoConfiguration(example.topology)
+    const destinationIp = topology.nodes
+      .find((node) => node.id === example.packet.targetHostId)
+      ?.interfaces[0]?.ipAddress
+
+    expect(destinationIp).toBe('10.0.2.10')
+
+    const trace = simulateIpv4PacketBatch(topology, {
+      sourceHostId: example.packet.sourceHostId,
+      destinationIp: destinationIp ?? '0.0.0.0',
+      ttl: example.packet.ttl,
+      packetType: example.packet.packetType,
+      payload: example.packet.payload,
+      packetCount: example.packet.packetCount,
+      intervalMs: example.packet.intervalMs,
+    })
+    const r1RouteIds = trace.events
+      .filter(
+        (event) =>
+          event.type === 'router-route-selected' &&
+          event.actorNodeId === 'router-r1',
+      )
+      .map((event) => (event.details?.selectedRoute as { id: string }).id)
+    const fragmentEvents = trace.events.filter(
+      (event) => event.type === 'ipv4-datagram-fragmented',
+    )
+
+    expect(trace.result.status).toBe('delivered')
+    expect(r1RouteIds).toEqual([
+      'route-r1-manual-via-r2',
+      'route-r1-manual-via-r3',
+    ])
+    expect(fragmentEvents.map((event) => event.details?.mtu)).toEqual([80, 120])
+    expect(
+      fragmentEvents.every(
+        (event) =>
+          Array.isArray(event.details?.fragments) &&
+          event.details.fragments.length > 1,
+      ),
+    ).toBe(true)
   })
 })
 

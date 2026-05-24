@@ -10,6 +10,14 @@ import type {
   SimulationEvent,
   TopologyState,
 } from '../../domain/types'
+import {
+  ipv4FlagsValue,
+  ipv4HeaderChecksum,
+  ipv4IdentificationValue,
+  ipv4PayloadLength,
+  ipv4TotalLength,
+  protocolNumber,
+} from '../../domain/fragmentation'
 
 export function LinkPacketDetails({
   topology,
@@ -116,15 +124,19 @@ function Ipv4Header({ datagram }: { datagram: IPv4Datagram }) {
         ['Internet Header Length', '20 bytes (5 words)'],
         ['DSCP/ECN', '0 / 0'],
         ['Total Length', `${ipv4TotalLength(datagram)} bytes`],
-        ['Identification', datagram.id],
-        ['Flags', 'not modeled'],
-        ['Fragment Offset', '0'],
+        ['Identification', ipv4IdentificationLabel(datagram)],
+        ['Flags', ipv4FlagsLabel(datagram)],
+        [
+          'Fragment Offset',
+          `${datagram.fragmentOffset} (${datagram.fragmentOffset * 8} bytes)`,
+        ],
         ['TTL', datagram.ttl],
         ['Protocol', ipv4ProtocolLabel(datagram)],
-        ['Header Checksum', 'not modeled'],
+        ['Header Checksum', ipv4HeaderChecksum(datagram)],
         ['Source IP', datagram.srcIp],
         ['Destination IP', datagram.dstIp],
         ['Options', 'none'],
+        ['Payload Length', `${ipv4PayloadLength(datagram)} bytes`],
       ]}
     />
   )
@@ -219,24 +231,22 @@ function ethernetPayloadLength(frame: EthernetFrame): number {
   return 0
 }
 
-function ipv4TotalLength(datagram: IPv4Datagram): number {
-  return 20 + upperLayerLength(datagram)
-}
-
-function upperLayerLength(datagram: IPv4Datagram): number {
-  if (isIcmpMessage(datagram.payload)) {
-    return 8 + textByteLength(datagram.payload.data ?? '')
-  }
-
-  if (isRawPayload(datagram.payload)) {
-    return textByteLength(datagram.payload.data)
-  }
-
-  return 0
-}
-
 function ipv4ProtocolLabel(datagram: IPv4Datagram): string {
-  return datagram.protocol === 'ICMP' ? 'ICMP (1)' : 'RAW (lab payload)'
+  return datagram.protocol === 'ICMP'
+    ? `ICMP (${protocolNumber(datagram)})`
+    : `RAW (${protocolNumber(datagram)})`
+}
+
+function ipv4IdentificationLabel(datagram: IPv4Datagram): string {
+  const value = ipv4IdentificationValue(datagram)
+
+  return `${value} (0x${value.toString(16).padStart(4, '0').toUpperCase()})`
+}
+
+function ipv4FlagsLabel(datagram: IPv4Datagram): string {
+  const value = ipv4FlagsValue(datagram)
+
+  return `Reserved=0, DF=${datagram.dontFragment ? 1 : 0}, MF=${datagram.moreFragments ? 1 : 0} (0x${value.toString(16).padStart(4, '0').toUpperCase()})`
 }
 
 function icmpTypeLabel(type: IcmpMessage['type']): string {

@@ -3,6 +3,7 @@ import { applyAutoConfiguration } from '../domain/autoConfig'
 import { generateMac } from '../domain/mac'
 import {
   DEFAULT_LAB_SETTINGS,
+  DEFAULT_LINK_MTU,
   type CanvasPosition,
   type HostNode,
   type LinkId,
@@ -54,6 +55,7 @@ interface LabStoreState {
   moveNode: (nodeId: NodeId, position: CanvasPosition) => void
   removeNode: (nodeId: NodeId) => void
   removeLink: (linkId: LinkId) => void
+  updateLinkMtu: (linkId: LinkId, mtu: number) => void
   deleteSelection: () => void
   selectNode: (nodeId: NodeId) => void
   selectLink: (linkId: LinkId) => void
@@ -184,6 +186,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
         status: 'up',
         delayMs: 100,
         lossRate: 0,
+        mtu: DEFAULT_LINK_MTU,
       }
 
       return {
@@ -263,6 +266,30 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
           links: topology.links.filter((link) => link.id !== linkId),
         }),
         selectedObject: null,
+        simulationTrace: null,
+        simulationBaseTopology: null,
+        simulationStatus: 'idle',
+        currentEventIndex: 0,
+      }
+    })
+  },
+
+  updateLinkMtu: (linkId, mtu) => {
+    set((state) => {
+      const topology = topologyForCurrentEvent(state)
+      const normalizedMtu = Number.isFinite(mtu)
+        ? Math.max(28, Math.floor(mtu))
+        : DEFAULT_LINK_MTU
+
+      return {
+        topology: {
+          ...topology,
+          links: topology.links.map((link) =>
+            link.id === linkId
+              ? { ...link, mtu: normalizedMtu }
+              : link,
+          ),
+        },
         simulationTrace: null,
         simulationBaseTopology: null,
         simulationStatus: 'idle',
@@ -772,6 +799,7 @@ function addTopologyLink(
     status: 'up',
     delayMs: 100,
     lossRate: 0,
+    mtu: DEFAULT_LINK_MTU,
   })
 }
 

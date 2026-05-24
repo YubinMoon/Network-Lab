@@ -2,6 +2,7 @@ import { broadcastAddress, hostAddressFromOffset } from './ip'
 import { generateMac } from './mac'
 import { applyRoutingTables } from './routing'
 import { applyNetworkSegments } from './segments'
+import { DEFAULT_LINK_MTU } from './types'
 import type {
   HostNode,
   InterfaceId,
@@ -20,7 +21,13 @@ interface InterfaceOwner {
 }
 
 export function applyAutoConfiguration(topology: TopologyState): TopologyState {
-  const linkedTopology = syncInterfaceLinkIds(topology)
+  const linkedTopology = syncInterfaceLinkIds({
+    ...topology,
+    links: topology.links.map((link) => ({
+      ...link,
+      mtu: link.mtu ?? DEFAULT_LINK_MTU,
+    })),
+  })
   const segmentedTopology = applyNetworkSegments(linkedTopology)
 
   if (!segmentedTopology.settings.autoConfiguration) {

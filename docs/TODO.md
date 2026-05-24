@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-25: Completed Link MTU and IPv4 fragmentation support with full IPv4 header values, equal-route round-robin forwarding, a fragmentation example, regression tests, and browser verification.
 - 2026-05-25: Completed Example list consolidation so entries with the same physical node configuration are represented once, with regression tests and browser verification.
 - 2026-05-25: Completed active Link packet detail cleanup by removing the non-protocol Transit block and unused top navigation buttons, with regression tests and browser verification.
 - 2026-05-25: Completed active Link packet inspection so selecting a moving Link shows Ethernet, ARP, IPv4, ICMP, and payload details in the Inspector, with regression tests and browser verification.

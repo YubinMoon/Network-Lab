@@ -82,6 +82,8 @@ export interface NetworkInterface {
 
 export type InterfaceStatus = 'up' | 'down'
 
+export const DEFAULT_LINK_MTU = 1500
+
 export interface NetworkLink {
   id: LinkId
   endpointA: LinkEndpoint
@@ -89,6 +91,7 @@ export interface NetworkLink {
   status: LinkStatus
   delayMs: number
   lossRate: number
+  mtu: number
 }
 
 export interface LinkEndpoint {
@@ -192,10 +195,16 @@ export interface ArpMessage {
 
 export interface IPv4Datagram {
   id: PacketId
+  identification: string
   srcIp: string
   dstIp: string
   ttl: number
   protocol: IPv4Protocol
+  dontFragment: boolean
+  moreFragments: boolean
+  fragmentOffset: number
+  fragmentPayloadLength?: number
+  originalDatagramId?: PacketId
   payload: IcmpMessage | RawPayload
 }
 
@@ -279,6 +288,8 @@ export type SimulationEventType =
   | 'router-route-lookup-started'
   | 'router-route-selected'
   | 'router-next-hop-selected'
+  | 'ipv4-datagram-fragmented'
+  | 'ipv4-fragments-reassembled'
   | 'router-frame-encapsulated'
   | 'packet-forwarded'
   | 'packet-delivered'
@@ -346,6 +357,8 @@ export type PacketDropReason =
   | 'Duplicate IP Address'
   | 'Duplicate MAC Address'
   | 'Network Unreachable'
+  | 'Fragmentation Needed'
+  | 'MTU Too Small'
   | 'Unsupported L2 Loop'
 
 export interface RouteLookupResult {

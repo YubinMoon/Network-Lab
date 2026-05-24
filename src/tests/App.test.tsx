@@ -359,9 +359,19 @@ describe('App', () => {
       'Packet on Link',
     )
 
+    expect(
+      within(screen.getByLabelText('Inspector')).getByLabelText('MTU'),
+    ).toHaveValue(1500)
     expect(within(packetSection).getByText('IPv4 Header')).toBeInTheDocument()
     expect(within(packetSection).getByText('ICMP Header')).toBeInTheDocument()
     expect(within(packetSection).queryByText('Transit')).not.toBeInTheDocument()
+    expect(
+      within(packetSection).getByText('Reserved=0, DF=0, MF=0 (0x0000)'),
+    ).toBeInTheDocument()
+    expect(within(packetSection).getByText('0 (0 bytes)')).toBeInTheDocument()
+    expect(
+      within(packetSection).getByText(/^0x[0-9A-F]{4}$/),
+    ).toBeInTheDocument()
     expect(within(packetSection).getByText('ICMP (1)')).toBeInTheDocument()
     expect(within(packetSection).getByText('Echo Request (8)')).toBeInTheDocument()
     expect(within(packetSection).getByText('Hello')).toBeInTheDocument()

@@ -98,6 +98,23 @@ describe('Longest Prefix Match', () => {
     expect(result.selectedRoute?.id).toBe('connected')
   })
 
+  test('round-robins across equal best routes when a selection index is provided', () => {
+    const routes = [
+      route('path-a', '10.0.2.0', 24, 'manual-static'),
+      route('path-b', '10.0.2.0', 24, 'manual-static'),
+    ]
+
+    expect(
+      lookupRoute('10.0.2.10', routes, { selectionIndex: 0 }).selectedRoute?.id,
+    ).toBe('path-a')
+    expect(
+      lookupRoute('10.0.2.10', routes, { selectionIndex: 1 }).selectedRoute?.id,
+    ).toBe('path-b')
+    expect(
+      lookupRoute('10.0.2.10', routes, { selectionIndex: 2 }).selectedRoute?.id,
+    ).toBe('path-a')
+  })
+
   test('returns no-match when no enabled route matches', () => {
     const result = lookupRoute('203.0.113.10', [
       route('lan', '10.0.2.0', 24, 'connected'),
@@ -240,6 +257,7 @@ function link(
     status: 'up',
     delayMs: 100,
     lossRate: 0,
+    mtu: 1500,
   }
 }
 

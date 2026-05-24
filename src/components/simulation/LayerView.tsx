@@ -1,4 +1,10 @@
 import type { EthernetFrame, IPv4Datagram } from '../../domain/types'
+import {
+  ipv4FlagsValue,
+  ipv4HeaderChecksum,
+  ipv4IdentificationValue,
+  ipv4TotalLength,
+} from '../../domain/fragmentation'
 import { useLabStore } from '../../store/useLabStore'
 
 export function LayerView() {
@@ -44,8 +50,28 @@ export function LayerView() {
           <dd>{datagram?.ttl ?? '-'}</dd>
         </div>
         <div>
+          <dt>Total Length</dt>
+          <dd>{datagram ? `${ipv4TotalLength(datagram)} bytes` : '-'}</dd>
+        </div>
+        <div>
+          <dt>Identification</dt>
+          <dd>{datagram ? ipv4IdentificationLabel(datagram) : '-'}</dd>
+        </div>
+        <div>
+          <dt>Flags</dt>
+          <dd>{datagram ? ipv4FlagsLabel(datagram) : '-'}</dd>
+        </div>
+        <div>
+          <dt>Fragment Offset</dt>
+          <dd>{datagram ? datagram.fragmentOffset : '-'}</dd>
+        </div>
+        <div>
           <dt>Protocol</dt>
           <dd>{datagram?.protocol ?? '-'}</dd>
+        </div>
+        <div>
+          <dt>Header Checksum</dt>
+          <dd>{datagram ? ipv4HeaderChecksum(datagram) : '-'}</dd>
         </div>
       </dl>
     </div>
@@ -57,4 +83,16 @@ function useCurrentEvent() {
   const currentEventIndex = useLabStore((state) => state.currentEventIndex)
 
   return simulationTrace?.events[currentEventIndex]
+}
+
+function ipv4FlagsLabel(datagram: IPv4Datagram): string {
+  const value = ipv4FlagsValue(datagram)
+
+  return `DF=${datagram.dontFragment ? 1 : 0}, MF=${datagram.moreFragments ? 1 : 0} (0x${value.toString(16).padStart(4, '0').toUpperCase()})`
+}
+
+function ipv4IdentificationLabel(datagram: IPv4Datagram): string {
+  const value = ipv4IdentificationValue(datagram)
+
+  return `${value} (0x${value.toString(16).padStart(4, '0').toUpperCase()})`
 }

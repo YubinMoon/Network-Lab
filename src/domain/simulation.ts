@@ -14,10 +14,15 @@ import {
   createIpv4Frame,
   forwardIpv4FrameAtRouter,
 } from './ipv4'
+import {
+  fragmentIpv4Datagram,
+  ipv4TotalLength,
+  normalizeMtu,
+} from './fragmentation'
 import { ipMatchesPrefix } from './ip'
 import { processSwitchFrame } from './l2'
 import { normalizeMac } from './mac'
-import { BROADCAST_MAC } from './types'
+import { BROADCAST_MAC, DEFAULT_LINK_MTU } from './types'
 import { validateTopology } from './validation'
 import type {
   EthernetFrame,
@@ -58,6 +63,7 @@ interface SimulationRunOptions {
   allowIcmpReply: boolean
   icmpReply: boolean
   replyPacketId?: string
+  routeSelectionIndex?: number
 }
 
 export function simulateIpv4Packet(
@@ -116,6 +122,7 @@ export function simulateIpv4PacketBatch(
       allowIcmpReply: true,
       icmpReply: false,
       replyPacketId: `${packetId}-reply`,
+      routeSelectionIndex: index,
     })
   })
 
@@ -275,34 +282,62 @@ function simulateIpv4PacketInternal(
       eventBuilder,
     })
   }
-  const outboundFrame = createIpv4Frame({
+  const sourceFragmentation = fragmentDatagramForPath({
+    topology,
+    datagram,
+    sourceInterface,
+    targetInterface: nextHopInterface.networkInterface,
+    actorNodeId: sourceHost.id,
+    actorName: sourceHost.name,
+    eventBuilder,
+  })
+
+  if (sourceFragmentation.status === 'dropped') {
+    return trace(packetId, input, eventBuilder.events, {
+      status: 'dropped',
+      reason: sourceFragmentation.reason,
+    })
+  }
+
+  const outboundFrames = createIpv4Frames({
     frameId: 'frame-1',
     srcMac: sourceInterface.macAddress,
     dstMac:
       cachedArpEntry?.macAddress ?? nextHopInterface.networkInterface.macAddress,
-    datagram,
+    datagrams: sourceFragmentation.datagrams,
   })
 
-  addSwitchForwardingEvents({
-    topology,
-    segmentId: sourceInterface.segmentId,
-    sourceInterface,
-    ethernetFrame: outboundFrame,
-    packetId,
-    eventBuilder,
-  })
+  for (const outboundFrame of outboundFrames) {
+    addSwitchForwardingEvents({
+      topology,
+      segmentId: sourceInterface.segmentId,
+      sourceInterface,
+      ethernetFrame: outboundFrame,
+      packetId,
+      eventBuilder,
+    })
+  }
 
   if (nextHopInterface.node.type === 'host') {
-    eventBuilder.add('packet-delivered', nextHopInterface.node.id, {
-      description: `${nextHopInterface.node.name} delivered IPv4 Datagram.`,
-      packetId,
-      frameId: outboundFrame.id,
-      details: {
-        datagram,
-        ethernetFrame: outboundFrame,
-        sourceInterfaceId: sourceInterface.id,
-        deliveredInterfaceId: nextHopInterface.networkInterface.id,
-      },
+    for (const outboundFrame of outboundFrames) {
+      eventBuilder.add('packet-delivered', nextHopInterface.node.id, {
+        description: `${nextHopInterface.node.name} delivered IPv4 Datagram.`,
+        packetId,
+        frameId: outboundFrame.id,
+        details: {
+          datagram: outboundFrame.payload,
+          ethernetFrame: outboundFrame,
+          sourceInterfaceId: sourceInterface.id,
+          deliveredInterfaceId: nextHopInterface.networkInterface.id,
+        },
+      })
+    }
+    addReassemblyEventIfNeeded({
+      datagram,
+      datagrams: sourceFragmentation.datagrams,
+      actorNodeId: nextHopInterface.node.id,
+      actorName: nextHopInterface.node.name,
+      eventBuilder,
     })
     return maybeReplyToIcmpEcho(
       topology,
@@ -323,11 +358,34 @@ function simulateIpv4PacketInternal(
     })
   }
 
+  if (outboundFrames.length > 1) {
+    for (const outboundFrame of outboundFrames) {
+      const fragmentDatagram = outboundFrame.payload as IPv4Datagram
+      const fragmentTrace = forwardThroughRouters(
+        topology,
+        input,
+        packetId,
+        fragmentDatagram,
+        sourceInterface,
+        nextHopInterface.node,
+        nextHopInterface.networkInterface,
+        eventBuilder,
+        { ...options, allowIcmpReply: false },
+      )
+
+      if (fragmentTrace.result.status === 'dropped') {
+        return fragmentTrace
+      }
+    }
+
+    return trace(packetId, input, eventBuilder.events, { status: 'delivered' })
+  }
+
   return forwardThroughRouters(
     topology,
     input,
     packetId,
-    datagram,
+    sourceFragmentation.datagrams[0] ?? datagram,
     sourceInterface,
     nextHopInterface.node,
     nextHopInterface.networkInterface,
@@ -383,6 +441,7 @@ function forwardThroughRouters(
       incomingFrame,
       `frame-${hop + 2}`,
       eventBuilder,
+      options.routeSelectionIndex,
     )
 
     if (routerResult.status === 'dropped') {
@@ -407,15 +466,29 @@ function forwardThroughRouters(
       routerResult.outInterface?.segmentId ===
         destinationInterface.networkInterface.segmentId
     ) {
-      eventBuilder.add('packet-delivered', destinationInterface.node.id, {
-        description: `${destinationInterface.node.name} delivered IPv4 Datagram.`,
-        packetId,
-        details: {
-          datagram: routerResult.datagram,
-          ethernetFrame: routerResult.frame,
-          sourceInterfaceId: routerResult.outInterface?.id,
-          deliveredInterfaceId: destinationInterface.networkInterface.id,
-        },
+      const deliveredFrames = routerResult.frames ?? [routerResult.frame]
+
+      for (const deliveredFrame of deliveredFrames) {
+        eventBuilder.add('packet-delivered', destinationInterface.node.id, {
+          description: `${destinationInterface.node.name} delivered IPv4 Datagram.`,
+          packetId,
+          frameId: deliveredFrame.id,
+          details: {
+            datagram: deliveredFrame.payload,
+            ethernetFrame: deliveredFrame,
+            sourceInterfaceId: routerResult.outInterface?.id,
+            deliveredInterfaceId: destinationInterface.networkInterface.id,
+          },
+        })
+      }
+      addReassemblyEventIfNeeded({
+        datagram: routerResult.datagram ?? initialDatagram,
+        datagrams: deliveredFrames.map(
+          (deliveredFrame) => deliveredFrame.payload as IPv4Datagram,
+        ),
+        actorNodeId: destinationInterface.node.id,
+        actorName: destinationInterface.node.name,
+        eventBuilder,
       })
       return maybeReplyToIcmpEcho(
         topology,
@@ -459,6 +532,7 @@ function forwardAtRouterWithEvents(
   frame: EthernetFrame,
   nextFrameId: string,
   eventBuilder: ReturnType<typeof createEventBuilder>,
+  routeSelectionIndex?: number,
 ) {
   const datagram = frame.payload as IPv4Datagram
 
@@ -488,6 +562,7 @@ function forwardAtRouterWithEvents(
     resolveMacForIp: (ipAddress) =>
       interfaceByIp(topology, ipAddress)?.networkInterface.macAddress,
     frameId: nextFrameId,
+    routeSelectionIndex,
   })
 
   if (result.previousTtl !== undefined && result.datagram) {
@@ -525,6 +600,8 @@ function forwardAtRouterWithEvents(
       outInterfaceId: result.outInterface?.id,
     },
   })
+  let egressTargetInterface: NetworkInterface | undefined
+
   if (result.nextHopIp && result.outInterface) {
     const cachedArpEntry = findArpCacheEntry(router.arpCache, result.nextHopIp)
 
@@ -582,6 +659,7 @@ function forwardAtRouterWithEvents(
         reason: 'No ARP Reply' as const,
       }
     }
+    egressTargetInterface = arpResponder.networkInterface
 
     const l2DropReason = packetDropBetweenInterfaces(
       topology,
@@ -611,33 +689,213 @@ function forwardAtRouterWithEvents(
       })
     }
   }
+  const fragmentation =
+    result.datagram && result.outInterface && egressTargetInterface
+      ? fragmentDatagramForPath({
+          topology,
+          datagram: result.datagram,
+          sourceInterface: result.outInterface,
+          targetInterface: egressTargetInterface,
+          actorNodeId: router.id,
+          actorName: router.name,
+          eventBuilder,
+        })
+      : { status: 'ok' as const, datagrams: result.datagram ? [result.datagram] : [] }
+
+  if (fragmentation.status === 'dropped') {
+    return {
+      ...result,
+      status: 'dropped' as const,
+      frame: undefined,
+      frames: undefined,
+      reason: fragmentation.reason,
+    }
+  }
+
+  const forwardedFrames =
+    result.frame && result.outInterface
+      ? createIpv4Frames({
+          frameId: result.frame.id,
+          srcMac: result.frame.srcMac,
+          dstMac: result.frame.dstMac,
+          datagrams: fragmentation.datagrams,
+        })
+      : result.frame
+        ? [result.frame]
+        : []
+  const forwardedResult = {
+    ...result,
+    frame: forwardedFrames[0],
+    frames: forwardedFrames,
+  }
+
   eventBuilder.add('router-frame-encapsulated', router.id, {
     description: `${router.name} created new Ethernet Frame.`,
     packetId: datagram.id,
-    frameId: result.frame?.id,
-    details: { ethernetFrame: result.frame },
+    frameId: forwardedResult.frame?.id,
+    details: { ethernetFrame: forwardedResult.frame },
   })
-  eventBuilder.add('packet-forwarded', router.id, {
-    description: `${router.name} forwarded frame out ${result.outInterface?.name}.`,
-    packetId: datagram.id,
-    frameId: result.frame?.id,
-    details: {
-      ethernetFrame: result.frame,
-      outInterfaceId: result.outInterface?.id,
-    },
-  })
-  if (result.outInterface && result.frame) {
-    addSwitchForwardingEvents({
-      topology,
-      segmentId: result.outInterface.segmentId,
-      sourceInterface: result.outInterface,
-      ethernetFrame: result.frame,
+  for (const forwardedFrame of forwardedFrames) {
+    eventBuilder.add('packet-forwarded', router.id, {
+      description: `${router.name} forwarded frame out ${result.outInterface?.name}.`,
       packetId: datagram.id,
-      eventBuilder,
+      frameId: forwardedFrame.id,
+      details: {
+        ethernetFrame: forwardedFrame,
+        outInterfaceId: result.outInterface?.id,
+      },
+    })
+  }
+  if (result.outInterface) {
+    for (const forwardedFrame of forwardedFrames) {
+      addSwitchForwardingEvents({
+        topology,
+        segmentId: result.outInterface.segmentId,
+        sourceInterface: result.outInterface,
+        ethernetFrame: forwardedFrame,
+        packetId: datagram.id,
+        eventBuilder,
+      })
+    }
+  }
+
+  return forwardedResult
+}
+
+function fragmentDatagramForPath({
+  topology,
+  datagram,
+  sourceInterface,
+  targetInterface,
+  actorNodeId,
+  actorName,
+  eventBuilder,
+}: {
+  topology: TopologyState
+  datagram: IPv4Datagram
+  sourceInterface: NetworkInterface
+  targetInterface: NetworkInterface
+  actorNodeId: string
+  actorName: string
+  eventBuilder: ReturnType<typeof createEventBuilder>
+}):
+  | { status: 'ok'; datagrams: IPv4Datagram[] }
+  | { status: 'dropped'; reason: PacketDropReason } {
+  const mtu = pathMtuBetweenInterfaces(topology, sourceInterface, targetInterface)
+  const fragmentation = fragmentIpv4Datagram(datagram, mtu)
+
+  if (fragmentation.status === 'dropped') {
+    eventBuilder.addDrop(
+      datagram.originalDatagramId ?? datagram.id,
+      actorNodeId,
+      fragmentation.reason ?? 'Network Unreachable',
+    )
+
+    return {
+      status: 'dropped',
+      reason: fragmentation.reason ?? 'Network Unreachable',
+    }
+  }
+
+  if (fragmentation.status === 'fragmented') {
+    eventBuilder.add('ipv4-datagram-fragmented', actorNodeId, {
+      description: `${actorName} fragmented IPv4 Datagram into ${fragmentation.datagrams.length} fragments for MTU ${fragmentation.mtu}.`,
+      packetId: datagram.originalDatagramId ?? datagram.id,
+      details: {
+        datagram,
+        fragments: fragmentation.datagrams,
+        fragmentIds: fragmentation.datagrams.map((fragment) => fragment.id),
+        mtu: fragmentation.mtu,
+        originalTotalLength: ipv4TotalLength(datagram),
+        maxFragmentPayloadLength: fragmentation.maxFragmentPayloadLength,
+        sourceInterfaceId: sourceInterface.id,
+        targetInterfaceId: targetInterface.id,
+      },
     })
   }
 
-  return result
+  return { status: 'ok', datagrams: fragmentation.datagrams }
+}
+
+function createIpv4Frames({
+  frameId,
+  srcMac,
+  dstMac,
+  datagrams,
+}: {
+  frameId: string
+  srcMac: string
+  dstMac: string
+  datagrams: IPv4Datagram[]
+}): EthernetFrame[] {
+  return datagrams.map((datagram, index) =>
+    createIpv4Frame({
+      frameId: datagrams.length === 1 ? frameId : `${frameId}-frag-${index + 1}`,
+      srcMac,
+      dstMac,
+      datagram,
+    }),
+  )
+}
+
+function addReassemblyEventIfNeeded({
+  datagram,
+  datagrams,
+  actorNodeId,
+  actorName,
+  eventBuilder,
+}: {
+  datagram: IPv4Datagram
+  datagrams: IPv4Datagram[]
+  actorNodeId: string
+  actorName: string
+  eventBuilder: ReturnType<typeof createEventBuilder>
+}) {
+  if (datagrams.length <= 1) {
+    return
+  }
+
+  eventBuilder.add('ipv4-fragments-reassembled', actorNodeId, {
+    description: `${actorName} reassembled IPv4 Datagram from ${datagrams.length} fragments.`,
+    packetId: datagram.originalDatagramId ?? datagram.id,
+    details: {
+      datagram,
+      fragments: datagrams,
+      fragmentIds: datagrams.map((fragment) => fragment.id),
+    },
+  })
+}
+
+function pathMtuBetweenInterfaces(
+  topology: TopologyState,
+  sourceInterface: NetworkInterface,
+  targetInterface: NetworkInterface,
+): number {
+  if (
+    !sourceInterface.segmentId ||
+    sourceInterface.segmentId !== targetInterface.segmentId
+  ) {
+    return DEFAULT_LINK_MTU
+  }
+
+  const pathLinkIds = findSegmentPathLinkIds(
+    topology,
+    sourceInterface.id,
+    targetInterface.id,
+    sourceInterface.segmentId,
+  )
+
+  if (!pathLinkIds || pathLinkIds.length === 0) {
+    return DEFAULT_LINK_MTU
+  }
+
+  return Math.min(
+    ...pathLinkIds.map((linkId) => {
+      const link = topology.links.find((candidate) => candidate.id === linkId)
+
+      return normalizeMtu(link?.mtu)
+    }),
+  )
 }
 
 function addArpReplyAndCacheEvents({
@@ -1143,6 +1401,7 @@ function maybeReplyToIcmpEcho(
       packetId: options.replyPacketId ?? `${packetId}-reply`,
       allowIcmpReply: false,
       icmpReply: true,
+      routeSelectionIndex: options.routeSelectionIndex,
     },
   )
   const events = [

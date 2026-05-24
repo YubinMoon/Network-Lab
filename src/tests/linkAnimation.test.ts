@@ -82,6 +82,7 @@ function switchedTopology(): TopologyState {
         status: 'up',
         delayMs: 100,
         lossRate: 0,
+        mtu: 1500,
       },
       {
         id: 'link-switch-b',
@@ -96,6 +97,7 @@ function switchedTopology(): TopologyState {
         status: 'up',
         delayMs: 100,
         lossRate: 0,
+        mtu: 1500,
       },
     ],
     segments: [],
@@ -201,6 +203,7 @@ function link(): NetworkLink {
     status: 'up',
     delayMs: 100,
     lossRate: 0,
+    mtu: 1500,
   }
 }
 

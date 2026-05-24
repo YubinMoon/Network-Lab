@@ -216,6 +216,7 @@ function link(
     status: 'up',
     delayMs: 100,
     lossRate: 0,
+    mtu: 1500,
   }
 }
 

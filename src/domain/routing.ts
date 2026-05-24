@@ -150,6 +150,7 @@ export function generateAutoStaticRoutes(
 export function lookupRoute(
   dstIp: string,
   routes: RouteEntry[],
+  options: { selectionIndex?: number } = {},
 ): RouteLookupResult {
   const candidates = routes
     .filter((route) => route.enabled)
@@ -179,8 +180,17 @@ export function lookupRoute(
     return { candidates, reason: 'no-match' }
   }
 
+  const bestCandidates = matchedCandidates.filter(
+    (candidate) =>
+      compareRouteEntries(candidate.route, matchedCandidates[0].route) === 0,
+  )
+  const selectedIndex =
+    bestCandidates.length > 0
+      ? (options.selectionIndex ?? 0) % bestCandidates.length
+      : 0
+
   return {
-    selectedRoute: matchedCandidates[0].route,
+    selectedRoute: bestCandidates[selectedIndex]?.route ?? matchedCandidates[0].route,
     candidates,
     reason: 'longest-prefix-match',
   }

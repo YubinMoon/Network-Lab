@@ -19,6 +19,7 @@ export function Inspector() {
   )
   const currentEventIndex = useLabStore((state) => state.currentEventIndex)
   const deleteSelection = useLabStore((state) => state.deleteSelection)
+  const updateLinkMtu = useLabStore((state) => state.updateLinkMtu)
   const currentEvent = simulationTrace?.events[currentEventIndex]
   const inspectedTopology =
     simulationBaseTopology && simulationTrace
@@ -76,6 +77,7 @@ export function Inspector() {
           topology={inspectedTopology}
           nodes={inspectedTopology.nodes}
           currentEvent={currentEvent}
+          onMtuChange={updateLinkMtu}
         />
       ) : null}
       <SegmentSummary segments={inspectedTopology.segments} />
@@ -374,11 +376,13 @@ function LinkInspector({
   topology,
   nodes,
   currentEvent,
+  onMtuChange,
 }: {
   link: NetworkLink
   topology: TopologyState
   nodes: NetworkNode[]
   currentEvent: SimulationEvent | undefined
+  onMtuChange: (linkId: string, mtu: number) => void
 }) {
   const endpointA = endpointName(link.endpointA.nodeId, nodes)
   const endpointB = endpointName(link.endpointB.nodeId, nodes)
@@ -407,6 +411,22 @@ function LinkInspector({
           <div>
             <dt>Loss Rate</dt>
             <dd>{link.lossRate}</dd>
+          </div>
+          <div>
+            <dt>MTU</dt>
+            <dd>
+              <input
+                aria-label="MTU"
+                id={`mtu-${link.id}`}
+                min={28}
+                name={`mtu-${link.id}`}
+                type="number"
+                value={link.mtu}
+                onChange={(event) =>
+                  onMtuChange(link.id, Number(event.target.value))
+                }
+              />
+            </dd>
           </div>
         </dl>
       </section>
