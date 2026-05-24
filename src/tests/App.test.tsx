@@ -1,4 +1,11 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { beforeEach, describe, expect, test } from 'vitest'
 import App from '../App'
 import { useLabStore } from '../store/useLabStore'
@@ -87,6 +94,31 @@ describe('App', () => {
 
     expect(screen.getByRole('button', { name: 'Play' })).toHaveClass('play')
     expect(useLabStore.getState().simulationStatus).toBe('paused')
+  })
+
+  test('does not show endpoint MAC addresses for switch interfaces', () => {
+    render(<App />)
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Load First Milestone' }),
+    )
+
+    const switchId = useLabStore
+      .getState()
+      .topology.nodes.find((node) => node.type === 'switch')?.id
+
+    expect(switchId).toBeTruthy()
+
+    act(() => {
+      useLabStore.getState().selectNode(switchId ?? '')
+    })
+
+    const inspector = within(screen.getByLabelText('Inspector'))
+
+    expect(inspector.getByText('e0/1')).toBeInTheDocument()
+    expect(
+      inspector.queryByRole('columnheader', { name: 'MAC Address' }),
+    ).not.toBeInTheDocument()
   })
 
   test('sends a packet from the Packet Generator', () => {

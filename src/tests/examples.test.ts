@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { applyAutoConfiguration } from '../domain/autoConfig'
 import { simulateIpv4PacketBatch } from '../domain/simulation'
+import { validateTopology } from '../domain/validation'
 import { EXAMPLE_TOPOLOGIES } from '../examples/topologies'
 
 const requiredExampleNames = [
@@ -79,6 +80,25 @@ describe('Example topologies', () => {
           `${example.name} ${link.id}`,
         ).toBeGreaterThanOrEqual(180)
       }
+    }
+  })
+
+  test('each example assigns unique endpoint MAC addresses', () => {
+    for (const example of EXAMPLE_TOPOLOGIES) {
+      const topology = applyAutoConfiguration(example.topology)
+      const endpointMacAddresses = topology.nodes
+        .filter((node) => node.type !== 'switch')
+        .flatMap((node) =>
+          node.interfaces.map((networkInterface) => networkInterface.macAddress),
+        )
+
+      expect(new Set(endpointMacAddresses).size, example.name).toBe(
+        endpointMacAddresses.length,
+      )
+      expect(
+        validateTopology(topology).map((issue) => issue.code),
+        example.name,
+      ).not.toContain('duplicate-mac-address')
     }
   })
 })

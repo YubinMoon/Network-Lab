@@ -70,7 +70,7 @@ function validateInterfaces(topology: TopologyState): ValidationIssue[] {
         })
       }
 
-      if (!isValidMac(networkInterface.macAddress)) {
+      if (node.type !== 'switch' && !isValidMac(networkInterface.macAddress)) {
         issues.push({
           id: `invalid-mac-${networkInterface.id}`,
           severity: 'error',
@@ -112,7 +112,7 @@ function validateInterfaces(topology: TopologyState): ValidationIssue[] {
 function validateDuplicateIpAddresses(topology: TopologyState): ValidationIssue[] {
   return duplicateInterfaceValueIssues(
     topology,
-    (networkInterface) => networkInterface.ipAddress,
+    (_, networkInterface) => networkInterface.ipAddress,
     'duplicate-ip-address',
     'Duplicate IP Address',
   )
@@ -121,7 +121,8 @@ function validateDuplicateIpAddresses(topology: TopologyState): ValidationIssue[
 function validateDuplicateMacAddresses(topology: TopologyState): ValidationIssue[] {
   return duplicateInterfaceValueIssues(
     topology,
-    (networkInterface) => networkInterface.macAddress.toUpperCase(),
+    (node, networkInterface) =>
+      node.type === 'switch' ? undefined : networkInterface.macAddress.toUpperCase(),
     'duplicate-mac-address',
     'Duplicate MAC Address',
   )
@@ -181,7 +182,10 @@ function validateUnsupportedL2Loop(topology: TopologyState): ValidationIssue[] {
 
 function duplicateInterfaceValueIssues(
   topology: TopologyState,
-  valueFor: (networkInterface: NetworkNode['interfaces'][number]) => string | undefined,
+  valueFor: (
+    node: NetworkNode,
+    networkInterface: NetworkNode['interfaces'][number],
+  ) => string | undefined,
   code: ValidationIssue['code'],
   message: string,
 ): ValidationIssue[] {
@@ -190,7 +194,7 @@ function duplicateInterfaceValueIssues(
 
   for (const node of topology.nodes) {
     for (const networkInterface of node.interfaces) {
-      const value = valueFor(networkInterface)
+      const value = valueFor(node, networkInterface)
 
       if (!value) {
         continue

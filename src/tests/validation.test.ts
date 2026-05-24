@@ -3,6 +3,7 @@ import { simulateIpv4Packet } from '../domain/simulation'
 import { validateTopology } from '../domain/validation'
 import {
   DEFAULT_LAB_SETTINGS,
+  type HostNode,
   type LinkEndpoint,
   type NetworkInterface,
   type NetworkLink,
@@ -14,14 +15,14 @@ describe('Topology validation', () => {
   test('detects duplicate IP and MAC addresses', () => {
     const topology: TopologyState = {
       nodes: [
-        switchNode('switch-a', [
-          networkInterface('switch-a', 'e0/1', {
+        hostNode('host-a', [
+          networkInterface('host-a', 'eth0', {
             ipAddress: '10.0.1.10',
             macAddress: '02:00:00:00:00:01',
           }),
         ]),
-        switchNode('switch-b', [
-          networkInterface('switch-b', 'e0/1', {
+        hostNode('host-b', [
+          networkInterface('host-b', 'eth0', {
             ipAddress: '10.0.1.10',
             macAddress: '02:00:00:00:00:01',
           }),
@@ -35,6 +36,30 @@ describe('Topology validation', () => {
 
     expect(issues.map((issue) => issue.code)).toEqual(
       expect.arrayContaining(['duplicate-ip-address', 'duplicate-mac-address']),
+    )
+  })
+
+  test('does not treat switch port MAC values as endpoint duplicates', () => {
+    const topology: TopologyState = {
+      nodes: [
+        switchNode('switch-a', [
+          networkInterface('switch-a', 'e0/1', {
+            macAddress: '02:00:00:00:00:01',
+          }),
+        ]),
+        switchNode('switch-b', [
+          networkInterface('switch-b', 'e0/1', {
+            macAddress: '02:00:00:00:00:01',
+          }),
+        ]),
+      ],
+      links: [],
+      segments: [],
+      settings: DEFAULT_LAB_SETTINGS,
+    }
+
+    expect(validateTopology(topology).map((issue) => issue.code)).not.toContain(
+      'duplicate-mac-address',
     )
   })
 
@@ -93,6 +118,17 @@ describe('Topology validation', () => {
     ).toEqual({ status: 'dropped', reason: 'Unsupported L2 Loop' })
   })
 })
+
+function hostNode(id: string, interfaces: NetworkInterface[]): HostNode {
+  return {
+    id,
+    type: 'host',
+    name: id,
+    position: { x: 0, y: 0 },
+    interfaces,
+    arpCache: [],
+  }
+}
 
 function switchNode(id: string, interfaces: NetworkInterface[]): SwitchNode {
   return {

@@ -144,7 +144,10 @@ function NodeInspector({
       </section>
       <section>
         <h3>Interface</h3>
-        <InterfaceTable interfaces={node.interfaces} />
+        <InterfaceTable
+          interfaces={node.interfaces}
+          showMacAddress={node.type !== 'switch'}
+        />
       </section>
       {node.type === 'host' ? (
         <section>
@@ -303,7 +306,13 @@ function routeTypeLabel(type: string): string {
   return 'Default'
 }
 
-function InterfaceTable({ interfaces }: { interfaces: NetworkInterface[] }) {
+function InterfaceTable({
+  interfaces,
+  showMacAddress,
+}: {
+  interfaces: NetworkInterface[]
+  showMacAddress: boolean
+}) {
   if (interfaces.length === 0) {
     return <p>No Interface</p>
   }
@@ -314,7 +323,7 @@ function InterfaceTable({ interfaces }: { interfaces: NetworkInterface[] }) {
         <tr>
           <th>Name</th>
           <th>IPv4</th>
-          <th>MAC Address</th>
+          {showMacAddress ? <th>MAC Address</th> : null}
           <th>Link</th>
         </tr>
       </thead>
@@ -327,7 +336,7 @@ function InterfaceTable({ interfaces }: { interfaces: NetworkInterface[] }) {
                 ? `${networkInterface.ipAddress}/${networkInterface.prefixLength}`
                 : '-'}
             </td>
-            <td>{networkInterface.macAddress}</td>
+            {showMacAddress ? <td>{networkInterface.macAddress}</td> : null}
             <td>{networkInterface.connectedLinkIds.length}</td>
           </tr>
         ))}

@@ -12,6 +12,7 @@ import {
   type SwitchNode,
   type TopologyState,
 } from '../domain/types'
+import { generateMac } from '../domain/mac'
 
 export interface ExampleTopology {
   id: string
@@ -278,7 +279,7 @@ function networkInterface(nodeId: string, name: string): NetworkInterface {
     id: interfaceId(nodeId, name),
     nodeId,
     name,
-    macAddress: '02:00:00:00:00:01',
+    macAddress: generateMac(`${nodeId}:${name}`),
     connectedLinkIds: [],
     status: 'up',
     autoAssigned: true,

@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-24: Completed example MAC assignment fix and stopped presenting Layer 2 switch ports as endpoint MAC owners, with validation/UI regression tests and browser verification.
 - 2026-05-24: Completed playback control order update so `Reset` sits to the right of the `Play`/`Pause` toggle, with regression tests and browser verification.
 - 2026-05-24: Completed playback controls cleanup by merging `Play` and `Pause` into one green/red toggle button in the left panel, with regression tests and browser verification.
 - 2026-05-24: Completed link status label cleanup so normal `Link - up` labels stay hidden unless selected while down links remain visible, with regression tests and browser verification.
