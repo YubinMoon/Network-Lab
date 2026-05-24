@@ -48,6 +48,16 @@ describe('App', () => {
     expect(useLabStore.getState().topology.segments).toHaveLength(2)
   })
 
+  test('hides normal link status labels by default', () => {
+    const { container } = render(<App />)
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Load First Milestone' }),
+    )
+
+    expect(container.querySelector('.link-edge-label')).not.toBeInTheDocument()
+  })
+
   test('sends a packet from the Packet Generator', () => {
     render(<App />)
 

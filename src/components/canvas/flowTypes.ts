@@ -13,6 +13,7 @@ export interface LabEdgeData extends Record<string, unknown> {
   label: string
   status: string
   active: boolean
+  selected: boolean
   direction: LinkAnimationDirection
 }
 

@@ -35,29 +35,33 @@ export function LinkEdge({
   })
   const animationPath =
     data?.direction === 'target-to-source' ? reverseEdgePath : edgePath
+  const edgeSelected = Boolean(selected) || Boolean(data?.selected)
+  const showLabel = edgeSelected || data?.status === 'down'
 
   return (
     <>
       <BaseEdge
         id={id}
         path={edgePath}
-        className={linkClassName(Boolean(selected), Boolean(data?.active))}
+        className={linkClassName(edgeSelected, Boolean(data?.active))}
       />
       {data?.active ? (
         <circle className="link-packet-dot" r="5">
           <animateMotion dur="900ms" repeatCount="indefinite" path={animationPath} />
         </circle>
       ) : null}
-      <EdgeLabelRenderer>
-        <span
-          className="link-edge-label"
-          style={{
-            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
-          }}
-        >
-          {data?.label ?? 'Link'} - {data?.status ?? 'up'}
-        </span>
-      </EdgeLabelRenderer>
+      {showLabel ? (
+        <EdgeLabelRenderer>
+          <span
+            className="link-edge-label"
+            style={{
+              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+            }}
+          >
+            {data?.label ?? 'Link'} - {data?.status ?? 'up'}
+          </span>
+        </EdgeLabelRenderer>
+      ) : null}
     </>
   )
 }

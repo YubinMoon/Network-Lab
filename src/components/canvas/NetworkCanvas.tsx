@@ -89,6 +89,7 @@ function NetworkCanvasFlow() {
           label: 'Link',
           status: link.status,
           active: linkAnimations.has(link.id),
+          selected: selectedObject?.kind === 'link' && selectedObject.id === link.id,
           direction: linkAnimations.get(link.id) ?? 'source-to-target',
         },
       })),

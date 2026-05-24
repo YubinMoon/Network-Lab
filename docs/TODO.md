@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-24: Completed link status label cleanup so normal `Link - up` labels stay hidden unless selected while down links remain visible, with regression tests and browser verification.
 - 2026-05-22: Completed `Load Example` layout fix so example nodes are spaced apart and the canvas refits on example load, with regression tests and browser verification.
 - 2026-05-22: Completed ARP sent event animation fix so ARP Request/Reply sent events show only the first physical hop, with switched-topology regression tests and browser verification.
 - 2026-05-22: Completed directional `Link` packet animation so reverse traffic renders from target to source, with focused tests and browser verification.
