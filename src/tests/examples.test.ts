@@ -1,20 +1,15 @@
 import { describe, expect, test } from 'vitest'
 import { applyAutoConfiguration } from '../domain/autoConfig'
 import { simulateIpv4PacketBatch } from '../domain/simulation'
+import type { LinkEndpoint, TopologyState } from '../domain/types'
 import { validateTopology } from '../domain/validation'
 import { EXAMPLE_TOPOLOGIES } from '../examples/topologies'
 
 const requiredExampleNames = [
   'Same LAN Communication',
-  'ARP Cache Hit vs Miss',
-  'Switch MAC Learning',
   'Default Gateway Forwarding',
   'Router-to-Router Forwarding',
-  'Longest Prefix Match',
   'No Matching Route',
-  'TTL Expired Loop',
-  'Link Loss and Unreliable Delivery',
-  'Multiple Datagrams and Connectionless Delivery',
 ]
 
 describe('Example topologies', () => {
@@ -22,6 +17,14 @@ describe('Example topologies', () => {
     expect(EXAMPLE_TOPOLOGIES.map((example) => example.name)).toEqual(
       requiredExampleNames,
     )
+  })
+
+  test('does not expose duplicate physical topologies', () => {
+    const signatures = EXAMPLE_TOPOLOGIES.map((example) =>
+      physicalTopologySignature(example.topology),
+    )
+
+    expect(new Set(signatures).size).toBe(signatures.length)
   })
 
   test('each example loads and can produce an initial packet trace', () => {
@@ -102,3 +105,27 @@ describe('Example topologies', () => {
     }
   })
 })
+
+function physicalTopologySignature(topology: TopologyState): string {
+  const nodes = topology.nodes
+    .map(
+      (node) =>
+        `${node.id}:${node.type}:${node.interfaces
+          .map((networkInterface) => networkInterface.name)
+          .join(',')}`,
+    )
+    .sort()
+  const links = topology.links
+    .map((networkLink) =>
+      [endpointSignature(networkLink.endpointA), endpointSignature(networkLink.endpointB)]
+        .sort()
+        .join('--'),
+    )
+    .sort()
+
+  return `${nodes.join('|')}::${links.join('|')}`
+}
+
+function endpointSignature(endpoint: LinkEndpoint): string {
+  return `${endpoint.nodeId}:${endpoint.interfaceId}`
+}

@@ -32,18 +32,6 @@ export const EXAMPLE_TOPOLOGIES: ExampleTopology[] = [
     packet: hostPacket('host-a', 'host-b', 'icmp-echo'),
   },
   {
-    id: 'arp-cache',
-    name: 'ARP Cache Hit vs Miss',
-    topology: sameLanTopology(),
-    packet: hostPacket('host-a', 'host-b', 'icmp-echo'),
-  },
-  {
-    id: 'switch-learning',
-    name: 'Switch MAC Learning',
-    topology: sameLanTopology(),
-    packet: hostPacket('host-a', 'host-b', 'generic-ipv4'),
-  },
-  {
     id: 'default-gateway',
     name: 'Default Gateway Forwarding',
     topology: firstMilestoneTopology(),
@@ -56,37 +44,10 @@ export const EXAMPLE_TOPOLOGIES: ExampleTopology[] = [
     packet: hostPacket('host-a', 'host-b', 'icmp-echo'),
   },
   {
-    id: 'longest-prefix-match',
-    name: 'Longest Prefix Match',
-    topology: twoRouterTopology(),
-    packet: hostPacket('host-a', 'host-b', 'generic-ipv4'),
-  },
-  {
     id: 'no-matching-route',
     name: 'No Matching Route',
     topology: oneLanOneRouterTopology(),
     packet: ipPacket('host-a', '10.0.99.10', 64),
-  },
-  {
-    id: 'ttl-expired-loop',
-    name: 'TTL Expired Loop',
-    topology: ttlLoopTopology(),
-    packet: ipPacket('host-a', '203.0.113.10', 4),
-  },
-  {
-    id: 'link-loss',
-    name: 'Link Loss and Unreliable Delivery',
-    topology: lossyFirstMilestoneTopology(),
-    packet: hostPacket('host-a', 'host-b', 'generic-ipv4'),
-  },
-  {
-    id: 'multiple-datagrams',
-    name: 'Multiple Datagrams and Connectionless Delivery',
-    topology: firstMilestoneTopology(),
-    packet: {
-      ...hostPacket('host-a', 'host-b', 'generic-ipv4'),
-      packetCount: 5,
-    },
   },
 ]
 
@@ -154,56 +115,6 @@ function twoRouterTopology(): TopologyState {
       link('link-5', endpoint(switchS2, 'e0/2'), endpoint(hostB, 'eth0')),
     ],
   )
-}
-
-function ttlLoopTopology(): TopologyState {
-  const topology = twoRouterTopology()
-  const routerR1 = topology.nodes.find(
-    (node): node is RouterNode => node.id === 'router-r1' && node.type === 'router',
-  )
-  const routerR2 = topology.nodes.find(
-    (node): node is RouterNode => node.id === 'router-r2' && node.type === 'router',
-  )
-
-  if (routerR1 && routerR2) {
-    routerR1.routingTable = [
-      {
-        id: 'r1-default-loop',
-        destinationNetwork: '0.0.0.0',
-        prefixLength: 0,
-        nextHopIp: '10.255.1.2',
-        outInterfaceId: 'router-r1-g0-1',
-        type: 'default',
-        enabled: true,
-      },
-    ]
-    routerR2.routingTable = [
-      {
-        id: 'r2-default-loop',
-        destinationNetwork: '0.0.0.0',
-        prefixLength: 0,
-        nextHopIp: '10.255.1.1',
-        outInterfaceId: 'router-r2-g0-0',
-        type: 'default',
-        enabled: true,
-      },
-    ]
-  }
-
-  return topology
-}
-
-function lossyFirstMilestoneTopology(): TopologyState {
-  const topology = firstMilestoneTopology()
-
-  return {
-    ...topology,
-    links: topology.links.map((networkLink) =>
-      networkLink.id === 'link-3'
-        ? { ...networkLink, lossRate: 1 }
-        : networkLink,
-    ),
-  }
 }
 
 function topologyState(
