@@ -9,6 +9,8 @@ import {
   createIpv4Frame,
   forwardIpv4FrameAtRouter,
 } from './ipv4'
+import { processSwitchFrame } from './l2'
+import { normalizeMac } from './mac'
 import { BROADCAST_MAC } from './types'
 import { validateTopology } from './validation'
 import type {
@@ -17,6 +19,7 @@ import type {
   InterfaceId,
   IPv4Datagram,
   LinkId,
+  MacTableEntry,
   NetworkInterface,
   NetworkNode,
   PacketDropReason,
@@ -25,6 +28,7 @@ import type {
   RouterNode,
   SegmentId,
   SimulationEvent,
+  SwitchNode,
   TopologyState,
 } from './types'
 
@@ -652,6 +656,20 @@ function addSwitchForwardingEvents({
     return
   }
 
+  const destinationInterface =
+    destinationMac === BROADCAST_MAC
+      ? undefined
+      : interfaceByMac(topology, destinationMac)
+  const unicastPath =
+    destinationInterface?.networkInterface.segmentId === segmentId
+      ? findSegmentPathInterfaceIds(
+          topology,
+          sourceInterface.id,
+          destinationInterface.networkInterface.id,
+          segmentId,
+        )
+      : undefined
+
   for (const switchNode of topology.nodes.filter(
     (node) => node.type === 'switch',
   )) {
@@ -664,22 +682,22 @@ function addSwitchForwardingEvents({
     }
 
     const ingressInterface =
-      segmentInterfaces.find((networkInterface) =>
-        isReachableInsideSegment(
-          topology,
-          sourceInterface.id,
-          networkInterface.id,
-          segmentId,
-        ),
-      ) ?? segmentInterfaces[0]
-    const egressInterfaceIds = segmentInterfaces
-      .map((networkInterface) => networkInterface.id)
-      .filter((interfaceId) => interfaceId !== ingressInterface.id)
-    const learnedEntry = {
-      macAddress: sourceMac,
-      portInterfaceId: ingressInterface.id,
-      ageSeconds: 0,
+      ingressInterfaceForSwitchPath(segmentInterfaces, unicastPath) ??
+      closestSwitchInterface(topology, sourceInterface.id, segmentInterfaces, segmentId)
+
+    if (!ingressInterface) {
+      continue
     }
+
+    const decision = processSwitchFrame(
+      {
+        ...switchNode,
+        macAddressTable: eventBuilder.switchMacTable(switchNode),
+      },
+      ingressInterface.id,
+      switchFrame(packetId, sourceMac, destinationMac),
+    )
+    eventBuilder.setSwitchMacTable(switchNode.id, decision.macAddressTable)
 
     eventBuilder.add('switch-frame-received', switchNode.id, {
       description: `${switchNode.name} received Ethernet Frame on ${ingressInterface.name}.`,
@@ -697,17 +715,27 @@ function addSwitchForwardingEvents({
         sourceInterfaceId: sourceInterface.id,
         macAddress: sourceMac,
         portInterfaceId: ingressInterface.id,
-        macAddressTable: [learnedEntry],
+        macAddressTable: [decision.learnedEntry],
       },
     })
 
-    if (destinationMac === BROADCAST_MAC) {
+    if (decision.kind === 'broadcast-flooded') {
       eventBuilder.add('switch-broadcast-flooded', switchNode.id, {
         description: `${switchNode.name} flooded broadcast Ethernet Frame.`,
         packetId,
         details: {
           ingressInterfaceId: ingressInterface.id,
-          egressInterfaceIds,
+          egressInterfaceIds: decision.egressInterfaceIds,
+        },
+      })
+    } else if (decision.kind === 'unknown-unicast-flooded') {
+      eventBuilder.add('switch-unknown-unicast-flooded', switchNode.id, {
+        description: `${switchNode.name} flooded unknown unicast Ethernet Frame.`,
+        packetId,
+        details: {
+          ingressInterfaceId: ingressInterface.id,
+          destinationMac,
+          egressInterfaceIds: decision.egressInterfaceIds,
         },
       })
     } else {
@@ -717,10 +745,75 @@ function addSwitchForwardingEvents({
         details: {
           ingressInterfaceId: ingressInterface.id,
           destinationMac,
-          egressInterfaceIds,
+          egressInterfaceIds: decision.egressInterfaceIds,
         },
       })
     }
+  }
+}
+
+function ingressInterfaceForSwitchPath(
+  segmentInterfaces: NetworkInterface[],
+  interfacePath: InterfaceId[] | undefined,
+): NetworkInterface | undefined {
+  if (!interfacePath) {
+    return undefined
+  }
+
+  return interfacePath
+    .map((interfaceId) =>
+      segmentInterfaces.find(
+        (networkInterface) => networkInterface.id === interfaceId,
+      ),
+    )
+    .find((networkInterface): networkInterface is NetworkInterface =>
+      Boolean(networkInterface),
+    )
+}
+
+function closestSwitchInterface(
+  topology: TopologyState,
+  sourceInterfaceId: InterfaceId,
+  segmentInterfaces: NetworkInterface[],
+  segmentId: SegmentId,
+): NetworkInterface | undefined {
+  return segmentInterfaces
+    .map((networkInterface) => ({
+      networkInterface,
+      path: findSegmentPathInterfaceIds(
+        topology,
+        sourceInterfaceId,
+        networkInterface.id,
+        segmentId,
+      ),
+    }))
+    .filter(
+      (
+        candidate,
+      ): candidate is {
+        networkInterface: NetworkInterface
+        path: InterfaceId[]
+      } => Boolean(candidate.path),
+    )
+    .sort((a, b) => a.path.length - b.path.length)[0]?.networkInterface
+}
+
+function switchFrame(
+  packetId: string,
+  sourceMac: string,
+  destinationMac: string,
+): EthernetFrame {
+  return {
+    id: `${packetId}-switch-frame`,
+    srcMac: sourceMac,
+    dstMac: destinationMac,
+    etherType: 'ARP',
+    payload: {
+      operation: 'request',
+      senderIp: '0.0.0.0',
+      senderMac: sourceMac,
+      targetIp: '0.0.0.0',
+    },
   }
 }
 
@@ -766,28 +859,32 @@ function packetDropBetweenInterfaces(
   return undefined
 }
 
-function isReachableInsideSegment(
-  topology: TopologyState,
-  sourceInterfaceId: InterfaceId,
-  targetInterfaceId: InterfaceId,
-  segmentId: SegmentId,
-): boolean {
-  return Boolean(
-    findSegmentPathLinkIds(
-      topology,
-      sourceInterfaceId,
-      targetInterfaceId,
-      segmentId,
-    ),
-  )
-}
-
 function findSegmentPathLinkIds(
   topology: TopologyState,
   sourceInterfaceId: InterfaceId,
   targetInterfaceId: InterfaceId,
   segmentId: SegmentId,
 ): LinkId[] | undefined {
+  return findSegmentPath(topology, sourceInterfaceId, targetInterfaceId, segmentId)
+    ?.pathLinkIds
+}
+
+function findSegmentPathInterfaceIds(
+  topology: TopologyState,
+  sourceInterfaceId: InterfaceId,
+  targetInterfaceId: InterfaceId,
+  segmentId: SegmentId,
+): InterfaceId[] | undefined {
+  return findSegmentPath(topology, sourceInterfaceId, targetInterfaceId, segmentId)
+    ?.pathInterfaceIds
+}
+
+function findSegmentPath(
+  topology: TopologyState,
+  sourceInterfaceId: InterfaceId,
+  targetInterfaceId: InterfaceId,
+  segmentId: SegmentId,
+): { pathInterfaceIds: InterfaceId[]; pathLinkIds: LinkId[] } | undefined {
   const interfacesById = new Map<InterfaceId, NetworkInterface>()
 
   for (const node of topology.nodes) {
@@ -853,8 +950,16 @@ function findSegmentPathLinkIds(
   }
 
   const visited = new Set<InterfaceId>([sourceInterfaceId])
-  const queue: Array<{ interfaceId: InterfaceId; pathLinkIds: LinkId[] }> = [
-    { interfaceId: sourceInterfaceId, pathLinkIds: [] },
+  const queue: Array<{
+    interfaceId: InterfaceId
+    pathInterfaceIds: InterfaceId[]
+    pathLinkIds: LinkId[]
+  }> = [
+    {
+      interfaceId: sourceInterfaceId,
+      pathInterfaceIds: [sourceInterfaceId],
+      pathLinkIds: [],
+    },
   ]
 
   while (queue.length > 0) {
@@ -865,7 +970,10 @@ function findSegmentPathLinkIds(
     }
 
     if (current.interfaceId === targetInterfaceId) {
-      return current.pathLinkIds
+      return {
+        pathInterfaceIds: current.pathInterfaceIds,
+        pathLinkIds: current.pathLinkIds,
+      }
     }
 
     for (const adjacent of adjacency.get(current.interfaceId) ?? []) {
@@ -876,10 +984,28 @@ function findSegmentPathLinkIds(
       visited.add(adjacent.interfaceId)
       queue.push({
         interfaceId: adjacent.interfaceId,
+        pathInterfaceIds: [...current.pathInterfaceIds, adjacent.interfaceId],
         pathLinkIds: adjacent.linkId
           ? [...current.pathLinkIds, adjacent.linkId]
           : current.pathLinkIds,
       })
+    }
+  }
+
+  return undefined
+}
+
+function interfaceByMac(
+  topology: TopologyState,
+  macAddress: string,
+): LocatedInterface | undefined {
+  const normalizedMacAddress = normalizeMac(macAddress)
+
+  for (const node of topology.nodes) {
+    for (const networkInterface of node.interfaces) {
+      if (normalizeMac(networkInterface.macAddress) === normalizedMacAddress) {
+        return { node, networkInterface }
+      }
     }
   }
 
@@ -1019,9 +1145,16 @@ function mergePacketTraces(
 
 function createEventBuilder() {
   const events: SimulationEvent[] = []
+  const switchMacTables = new Map<string, MacTableEntry[]>()
 
   return {
     events,
+    switchMacTable(switchNode: SwitchNode): MacTableEntry[] {
+      return switchMacTables.get(switchNode.id) ?? switchNode.macAddressTable
+    },
+    setSwitchMacTable(switchNodeId: string, macAddressTable: MacTableEntry[]) {
+      switchMacTables.set(switchNodeId, macAddressTable)
+    },
     add(
       type: SimulationEvent['type'],
       actorNodeId: string,

@@ -90,6 +90,30 @@ describe('IPv4 forwarding simulation', () => {
     expect(switchS1?.macAddressTable.length).toBeGreaterThan(0)
   })
 
+  test('records known unicast switch forwarding only on the learned egress port', () => {
+    const topology = applyAutoConfiguration(threeHostSwitchTopology())
+    const trace = simulateIpv4Packet(topology, {
+      sourceHostId: 'host-a',
+      destinationIp: '10.0.1.12',
+      ttl: 64,
+      packetType: 'generic-ipv4',
+    })
+    const hostAMacAddress = interfaceByName(topology, 'host-a', 'eth0')
+      .macAddress
+    const arpReplyForwardedEvent = trace.events.find(
+      (event) =>
+        event.type === 'switch-known-unicast-forwarded' &&
+        event.details?.destinationMac === hostAMacAddress,
+    )
+
+    expect(arpReplyForwardedEvent?.details).toEqual(
+      expect.objectContaining({
+        ingressInterfaceId: 'switch-s1-e0-3',
+        egressInterfaceIds: ['switch-s1-e0-1'],
+      }),
+    )
+  })
+
   test('applies dynamic table events only through the selected event index', () => {
     const topology = applyAutoConfiguration(firstMilestoneTopology())
     const trace = simulateIpv4Packet(topology, {
@@ -266,6 +290,26 @@ function firstMilestoneTopology(): TopologyState {
       link('link-2', endpoint(switchS1, 'e0/2'), endpoint(routerR1, 'g0/0')),
       link('link-3', endpoint(routerR1, 'g0/1'), endpoint(switchS2, 'e0/1')),
       link('link-4', endpoint(switchS2, 'e0/2'), endpoint(hostB, 'eth0')),
+    ],
+  )
+}
+
+function threeHostSwitchTopology(): TopologyState {
+  const hostA = host('host-a', 'Host A')
+  const switchS1 = switchNode('switch-s1', 'Switch S1', [
+    'e0/1',
+    'e0/2',
+    'e0/3',
+  ])
+  const hostB = host('host-b', 'Host B')
+  const hostC = host('host-c', 'Host C')
+
+  return topologyState(
+    [hostA, switchS1, hostB, hostC],
+    [
+      link('link-1', endpoint(hostA, 'eth0'), endpoint(switchS1, 'e0/1')),
+      link('link-2', endpoint(switchS1, 'e0/2'), endpoint(hostB, 'eth0')),
+      link('link-3', endpoint(switchS1, 'e0/3'), endpoint(hostC, 'eth0')),
     ],
   )
 }
