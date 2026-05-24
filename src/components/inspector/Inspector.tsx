@@ -413,7 +413,6 @@ function LinkInspector({
       <LinkPacketDetails
         topology={topology}
         link={link}
-        nodes={nodes}
         currentEvent={currentEvent}
       />
     </>

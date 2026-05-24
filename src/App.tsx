@@ -33,13 +33,6 @@ function App() {
     <main className="lab-shell">
       <header className="top-bar">
         <h1>IPv4 Network Visualization Lab</h1>
-        <nav aria-label="Primary">
-          <button type="button">Lab</button>
-          <button type="button">Examples</button>
-          <button type="button">Packet Trace</button>
-          <button type="button">Settings</button>
-          <button type="button">Share</button>
-        </nav>
       </header>
 
       <section className="workspace" aria-label="Lab Workspace">

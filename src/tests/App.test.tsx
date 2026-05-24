@@ -24,6 +24,9 @@ describe('App', () => {
       }),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Host' })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('navigation', { name: 'Primary' }),
+    ).not.toBeInTheDocument()
     expect(screen.getByLabelText('Network Canvas')).toBeInTheDocument()
     expect(screen.getByLabelText('Simulation Panel')).toBeInTheDocument()
   })
@@ -338,6 +341,7 @@ describe('App', () => {
 
     expect(within(packetSection).getByText('Ethernet Header')).toBeInTheDocument()
     expect(within(packetSection).getByText('ARP Header')).toBeInTheDocument()
+    expect(within(packetSection).queryByText('Transit')).not.toBeInTheDocument()
     expect(within(packetSection).getByText('FF:FF:FF:FF:FF:FF')).toBeInTheDocument()
     expect(within(packetSection).getByText('10.0.1.10')).toBeInTheDocument()
     expect(within(packetSection).getByText('10.0.1.11')).toBeInTheDocument()
@@ -357,6 +361,7 @@ describe('App', () => {
 
     expect(within(packetSection).getByText('IPv4 Header')).toBeInTheDocument()
     expect(within(packetSection).getByText('ICMP Header')).toBeInTheDocument()
+    expect(within(packetSection).queryByText('Transit')).not.toBeInTheDocument()
     expect(within(packetSection).getByText('ICMP (1)')).toBeInTheDocument()
     expect(within(packetSection).getByText('Echo Request (8)')).toBeInTheDocument()
     expect(within(packetSection).getByText('Hello')).toBeInTheDocument()

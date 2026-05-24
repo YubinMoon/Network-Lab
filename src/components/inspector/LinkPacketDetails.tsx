@@ -1,13 +1,11 @@
 import type { ReactNode } from 'react'
-import { packetOnLink, type LinkPacketSnapshot } from './linkPacketSnapshot'
+import { packetOnLink } from './linkPacketSnapshot'
 import type {
   ArpMessage,
   EthernetFrame,
   IcmpMessage,
   IPv4Datagram,
-  LinkEndpoint,
   NetworkLink,
-  NetworkNode,
   RawPayload,
   SimulationEvent,
   TopologyState,
@@ -16,12 +14,10 @@ import type {
 export function LinkPacketDetails({
   topology,
   link,
-  nodes,
   currentEvent,
 }: {
   topology: TopologyState
   link: NetworkLink
-  nodes: NetworkNode[]
   currentEvent: SimulationEvent | undefined
 }) {
   const packet = packetOnLink(topology, link, currentEvent)
@@ -33,15 +29,6 @@ export function LinkPacketDetails({
         <p>No active packet on this Link.</p>
       ) : (
         <>
-          <HeaderBlock
-            title="Transit"
-            fields={[
-              ['Direction', directionLabel(link, packet.direction, nodes)],
-              ['Current Event', packet.eventType],
-              ['Packet ID', packet.packetId ?? '-'],
-              ['Frame ID', packet.frame.id],
-            ]}
-          />
           <EthernetHeader frame={packet.frame} />
           {isArpMessage(packet.frame.payload) ? (
             <ArpHeader message={packet.frame.payload} />
@@ -170,27 +157,6 @@ function RawPayloadView({ payload }: { payload: RawPayload }) {
       ]}
     />
   )
-}
-
-function directionLabel(
-  link: NetworkLink,
-  direction: LinkPacketSnapshot['direction'],
-  nodes: NetworkNode[],
-): string {
-  const from =
-    direction === 'source-to-target' ? link.endpointA : link.endpointB
-  const to = direction === 'source-to-target' ? link.endpointB : link.endpointA
-
-  return `${endpointLabel(from, nodes)} -> ${endpointLabel(to, nodes)}`
-}
-
-function endpointLabel(endpoint: LinkEndpoint, nodes: NetworkNode[]): string {
-  const node = nodes.find((candidate) => candidate.id === endpoint.nodeId)
-  const networkInterface = node?.interfaces.find(
-    (candidate) => candidate.id === endpoint.interfaceId,
-  )
-
-  return `${node?.name ?? endpoint.nodeId} ${networkInterface?.name ?? endpoint.interfaceId}`
 }
 
 function isArpMessage(value: unknown): value is ArpMessage {

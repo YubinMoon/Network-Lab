@@ -7,10 +7,7 @@ import type {
 } from '../../domain/types'
 
 export interface LinkPacketSnapshot {
-  direction: 'source-to-target' | 'target-to-source'
-  eventType: SimulationEvent['type']
   frame: EthernetFrame
-  packetId?: string
 }
 
 export function packetOnLink(
@@ -24,17 +21,12 @@ export function packetOnLink(
     return undefined
   }
 
-  const direction = linkAnimationsForEvent(topology, event).get(link.id)
-
-  if (!direction) {
+  if (!linkAnimationsForEvent(topology, event).has(link.id)) {
     return undefined
   }
 
   return {
-    direction,
-    eventType: event.type,
     frame,
-    packetId: event.packetId,
   }
 }
 
