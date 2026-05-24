@@ -41,6 +41,70 @@ describe('App', () => {
     expect(useLabStore.getState().topology.nodes).toHaveLength(3)
   })
 
+  test('marks the clicked node card as selected', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Host' }))
+    fireEvent.click(screen.getAllByText('Host A')[0])
+
+    expect(
+      screen
+        .getAllByText('Host A')
+        .some((element) =>
+          element.closest('.network-node-card')?.classList.contains('selected'),
+        ),
+    ).toBe(true)
+  })
+
+  test('uses a new Host interface for an additional Host link', () => {
+    act(() => {
+      useLabStore.getState().addNode('host')
+      useLabStore.getState().addNode('switch')
+      useLabStore.getState().addNode('host')
+      useLabStore.getState().addNode('host')
+    })
+
+    const hostA = nodeByName('Host A')
+    const switchS1 = nodeByName('Switch S1')
+    const hostB = nodeByName('Host B')
+    const hostC = nodeByName('Host C')
+
+    act(() => {
+      useLabStore.getState().addLink(hostA.id, switchS1.id)
+      useLabStore.getState().addLink(switchS1.id, hostB.id)
+      useLabStore.getState().addLink(hostB.id, hostC.id)
+    })
+
+    const topology = useLabStore.getState().topology
+    const updatedHostB = topology.nodes.find((node) => node.id === hostB.id)
+    const updatedHostC = topology.nodes.find((node) => node.id === hostC.id)
+    const switchSegment = topology.segments.find((segment) =>
+      segment.memberInterfaceIds.includes(`${switchS1.id}-e0-2`),
+    )
+    const hostCSegment = topology.segments.find((segment) =>
+      segment.memberInterfaceIds.includes(`${hostC.id}-eth0`),
+    )
+
+    expect(updatedHostB?.type).toBe('host')
+    expect(updatedHostC?.type).toBe('host')
+
+    if (updatedHostB?.type === 'host') {
+      expect(updatedHostB.interfaces.map((networkInterface) => networkInterface.name)).toEqual([
+        'eth0',
+        'eth1',
+      ])
+      expect(updatedHostB.interfaces[0].connectedLinkIds).toHaveLength(1)
+      expect(updatedHostB.interfaces[1].connectedLinkIds).toHaveLength(1)
+    }
+
+    expect(switchSegment?.memberInterfaceIds).toContain(`${hostB.id}-eth0`)
+    expect(switchSegment?.memberInterfaceIds).not.toContain(`${hostB.id}-eth1`)
+    expect(switchSegment?.memberInterfaceIds).not.toContain(`${hostC.id}-eth0`)
+    expect(hostCSegment?.memberInterfaceIds).toEqual(
+      expect.arrayContaining([`${hostB.id}-eth1`, `${hostC.id}-eth0`]),
+    )
+  })
+
   test('loads the first milestone topology', () => {
     render(<App />)
 
@@ -262,4 +326,16 @@ function sectionByHeading(container: HTMLElement, name: string): HTMLElement {
   }
 
   return section
+}
+
+function nodeByName(name: string) {
+  const node = useLabStore
+    .getState()
+    .topology.nodes.find((candidate) => candidate.name === name)
+
+  if (!node) {
+    throw new Error(`Missing node ${name}`)
+  }
+
+  return node
 }

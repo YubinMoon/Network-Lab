@@ -608,18 +608,38 @@ function attachInterfaceForLink(
   linkId: LinkId,
 ): { node: NetworkNode; interfaceId: string } {
   if (node.type === 'host') {
-    const existingInterface = node.interfaces[0] ?? createInterface(node.id, 'eth0')
-    const updatedInterface = addLinkToInterface(existingInterface, linkId)
+    const availableInterface = node.interfaces.find(
+      (networkInterface) => networkInterface.connectedLinkIds.length === 0,
+    )
+
+    if (availableInterface) {
+      const updatedInterface = addLinkToInterface(availableInterface, linkId)
+
+      return {
+        node: {
+          ...node,
+          interfaces: node.interfaces.map((networkInterface) =>
+            networkInterface.id === updatedInterface.id
+              ? updatedInterface
+              : networkInterface,
+          ),
+        },
+        interfaceId: updatedInterface.id,
+      }
+    }
+
+    const networkInterface = createInterface(
+      node.id,
+      nextHostInterfaceName(node),
+      [linkId],
+    )
 
     return {
       node: {
         ...node,
-        interfaces: [
-          updatedInterface,
-          ...node.interfaces.filter((iface) => iface.id !== existingInterface.id),
-        ],
+        interfaces: [...node.interfaces, networkInterface],
       },
-      interfaceId: updatedInterface.id,
+      interfaceId: networkInterface.id,
     }
   }
 
@@ -636,6 +656,20 @@ function attachInterfaceForLink(
     },
     interfaceId: networkInterface.id,
   }
+}
+
+function nextHostInterfaceName(node: HostNode): string {
+  let index = 0
+
+  while (
+    node.interfaces.some(
+      (networkInterface) => networkInterface.name === `eth${index}`,
+    )
+  ) {
+    index += 1
+  }
+
+  return `eth${index}`
 }
 
 function addLinkToInterface(

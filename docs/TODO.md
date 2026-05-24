@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-25: Completed selected-node highlight and Host multi-interface link handling so additional Host links create separate interfaces and L2 segments, with regression tests and browser verification.
 - 2026-05-25: Completed switch known-unicast event fix so simulation uses Layer 2 MAC-table decisions and animates only the selected egress link, with regression tests and browser verification.
 - 2026-05-25: Completed follow-up canvas camera fix so explicit fit requests do not replay when nodes are added after a topology load, with regression tests and browser verification.
 - 2026-05-25: Completed canvas camera preservation on node creation by removing unconditional React Flow fit behavior while keeping explicit fit requests for topology loads, with regression tests and browser verification.

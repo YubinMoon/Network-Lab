@@ -291,13 +291,23 @@ dd {
 }
 
 .network-node-card.selected {
-  outline: 3px solid var(--accent-soft);
+  outline: 4px solid #8fd3ff;
+  outline-offset: 5px;
+  box-shadow:
+    0 0 0 9px rgba(91, 169, 255, 0.2),
+    0 12px 24px var(--shadow);
 }
 
 .network-node-card.active {
-  outline: 3px solid rgba(255, 184, 107, 0.44);
   box-shadow:
     0 0 0 5px var(--active-soft),
+    0 12px 24px var(--shadow);
+}
+
+.network-node-card.selected.active {
+  box-shadow:
+    0 0 0 5px var(--active-soft),
+    0 0 0 10px rgba(91, 169, 255, 0.22),
     0 12px 24px var(--shadow);
 }
 
