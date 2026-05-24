@@ -42,6 +42,7 @@ interface LabStoreState {
   topology: TopologyState
   selectedObject: LabSelection
   simulationTrace: PacketTrace | null
+  simulationBaseTopology: TopologyState | null
   simulationStatus: SimulationStatus
   currentEventIndex: number
   simulationSpeed: number
@@ -88,6 +89,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   topology: emptyTopology(),
   selectedObject: null,
   simulationTrace: null,
+  simulationBaseTopology: null,
   simulationStatus: 'idle',
   currentEventIndex: 0,
   simulationSpeed: 1,
@@ -106,6 +108,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
         }),
         selectedObject: { kind: 'node', id: node.id },
         simulationTrace: null,
+        simulationBaseTopology: null,
         simulationStatus: 'idle',
         currentEventIndex: 0,
       }
@@ -173,6 +176,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
         }),
         selectedObject: { kind: 'link', id: link.id },
         simulationTrace: null,
+        simulationBaseTopology: null,
         simulationStatus: 'idle',
         currentEventIndex: 0,
       }
@@ -212,6 +216,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
         }),
         selectedObject: null,
         simulationTrace: null,
+        simulationBaseTopology: null,
         simulationStatus: 'idle',
         currentEventIndex: 0,
       }
@@ -229,6 +234,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       }),
       selectedObject: null,
       simulationTrace: null,
+      simulationBaseTopology: null,
       simulationStatus: 'idle',
       currentEventIndex: 0,
     }))
@@ -264,6 +270,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       topology: emptyTopology(),
       selectedObject: null,
       simulationTrace: null,
+      simulationBaseTopology: null,
       simulationStatus: 'idle',
       currentEventIndex: 0,
     })
@@ -285,12 +292,14 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
           return { ...node, arpCache: [] }
         }),
       },
+      simulationBaseTopology: null,
     }))
   },
 
   clearSimulationTrace: () => {
     set({
       simulationTrace: null,
+      simulationBaseTopology: null,
       simulationStatus: 'idle',
       currentEventIndex: 0,
     })
@@ -301,6 +310,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       topology: applyAutoConfiguration(createFirstMilestoneTopology()),
       selectedObject: null,
       simulationTrace: null,
+      simulationBaseTopology: null,
       simulationStatus: 'idle',
       currentEventIndex: 0,
     })
@@ -330,6 +340,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
     set({
       topology: applySimulationTraceToTopology(topology, simulationTrace),
       simulationTrace,
+      simulationBaseTopology: topology,
       simulationStatus:
         simulationTrace.events.length > 0 ? 'paused' : 'completed',
       currentEventIndex: 0,
@@ -394,6 +405,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       topology: applyAutoConfiguration(topologyFromJson(json)),
       selectedObject: null,
       simulationTrace: null,
+      simulationBaseTopology: null,
       simulationStatus: 'idle',
       currentEventIndex: 0,
     })
@@ -414,6 +426,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       topology: applyAutoConfiguration(topology),
       selectedObject: null,
       simulationTrace: null,
+      simulationBaseTopology: null,
       simulationStatus: 'idle',
       currentEventIndex: 0,
     })
@@ -444,6 +457,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       topology: applyAutoConfiguration(topology),
       selectedObject: null,
       simulationTrace: null,
+      simulationBaseTopology: null,
       simulationStatus: 'idle',
       currentEventIndex: 0,
     })
@@ -473,6 +487,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
         : topology,
       selectedObject: null,
       simulationTrace,
+      simulationBaseTopology: simulationTrace ? topology : null,
       simulationStatus: simulationTrace ? 'paused' : 'idle',
       currentEventIndex: 0,
       canvasFitRequestId: state.canvasFitRequestId + 1,

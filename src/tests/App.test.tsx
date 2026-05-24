@@ -121,6 +121,59 @@ describe('App', () => {
     ).not.toBeInTheDocument()
   })
 
+  test('shows Inspector ARP Cache entries only after their update event', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load Example' }))
+
+    const trace = useLabStore.getState().simulationTrace
+    const missIndex =
+      trace?.events.findIndex(
+        (event) =>
+          event.type === 'arp-cache-miss' && event.actorNodeId === 'host-a',
+      ) ?? -1
+    const updateIndex =
+      trace?.events.findIndex(
+        (event) =>
+          event.type === 'arp-cache-updated' && event.actorNodeId === 'host-a',
+      ) ?? -1
+    const updateIpAddress = trace?.events[updateIndex]?.details?.ipAddress
+
+    expect(missIndex).toBeGreaterThanOrEqual(0)
+    expect(updateIndex).toBeGreaterThan(missIndex)
+    expect(typeof updateIpAddress).toBe('string')
+
+    act(() => {
+      useLabStore.getState().selectNode('host-a')
+
+      for (let index = 0; index < missIndex; index += 1) {
+        useLabStore.getState().nextEvent()
+      }
+    })
+
+    let arpCacheSection = sectionByHeading(
+      screen.getByLabelText('Inspector'),
+      'ARP Cache',
+    )
+
+    expect(within(arpCacheSection).getByText('0 entries')).toBeInTheDocument()
+
+    act(() => {
+      for (let index = missIndex; index < updateIndex; index += 1) {
+        useLabStore.getState().nextEvent()
+      }
+    })
+
+    arpCacheSection = sectionByHeading(
+      screen.getByLabelText('Inspector'),
+      'ARP Cache',
+    )
+
+    expect(
+      within(arpCacheSection).getByText(updateIpAddress as string),
+    ).toBeInTheDocument()
+  })
+
   test('sends a packet from the Packet Generator', () => {
     render(<App />)
 
@@ -160,3 +213,15 @@ describe('App', () => {
     expect(screen.getAllByText('Host A').length).toBeGreaterThan(0)
   })
 })
+
+function sectionByHeading(container: HTMLElement, name: string): HTMLElement {
+  const section = within(container)
+    .getByRole('heading', { name })
+    .closest('section')
+
+  if (!section) {
+    throw new Error(`Missing section ${name}`)
+  }
+
+  return section
+}

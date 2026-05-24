@@ -1,4 +1,5 @@
 import { useLabStore } from '../../store/useLabStore'
+import { applySimulationTraceToTopology } from '../../domain/dynamicTables'
 import type { NetworkInterface, NetworkLink, NetworkNode } from '../../domain/types'
 import { ValidationPanel } from './ValidationPanel'
 
@@ -6,9 +7,20 @@ export function Inspector() {
   const topology = useLabStore((state) => state.topology)
   const selectedObject = useLabStore((state) => state.selectedObject)
   const simulationTrace = useLabStore((state) => state.simulationTrace)
+  const simulationBaseTopology = useLabStore(
+    (state) => state.simulationBaseTopology,
+  )
   const currentEventIndex = useLabStore((state) => state.currentEventIndex)
   const deleteSelection = useLabStore((state) => state.deleteSelection)
   const currentEvent = simulationTrace?.events[currentEventIndex]
+  const inspectedTopology =
+    simulationBaseTopology && simulationTrace
+      ? applySimulationTraceToTopology(
+          simulationBaseTopology,
+          simulationTrace,
+          currentEventIndex,
+        )
+      : topology
   const selectedRoute = currentEvent?.details?.selectedRoute as
     | { id: string }
     | undefined
@@ -23,11 +35,11 @@ export function Inspector() {
       : undefined
   const selectedNode =
     selectedObject?.kind === 'node'
-      ? topology.nodes.find((node) => node.id === selectedObject.id)
+      ? inspectedTopology.nodes.find((node) => node.id === selectedObject.id)
       : undefined
   const selectedLink =
     selectedObject?.kind === 'link'
-      ? topology.links.find((link) => link.id === selectedObject.id)
+      ? inspectedTopology.links.find((link) => link.id === selectedObject.id)
       : undefined
 
   return (
@@ -52,9 +64,9 @@ export function Inspector() {
         />
       ) : null}
       {selectedLink ? (
-        <LinkInspector link={selectedLink} nodes={topology.nodes} />
+        <LinkInspector link={selectedLink} nodes={inspectedTopology.nodes} />
       ) : null}
-      <SegmentSummary segments={topology.segments} />
+      <SegmentSummary segments={inspectedTopology.segments} />
       {selectedObject ? (
         <button type="button" className="danger-button" onClick={deleteSelection}>
           Delete Selection

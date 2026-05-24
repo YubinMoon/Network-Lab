@@ -90,6 +90,38 @@ describe('IPv4 forwarding simulation', () => {
     expect(switchS1?.macAddressTable.length).toBeGreaterThan(0)
   })
 
+  test('applies dynamic table events only through the selected event index', () => {
+    const topology = applyAutoConfiguration(firstMilestoneTopology())
+    const trace = simulateIpv4Packet(topology, {
+      sourceHostId: 'host-a',
+      destinationIp: '10.0.2.10',
+      ttl: 64,
+      payload: 'Hello',
+    })
+    const missIndex = trace.events.findIndex(
+      (event) => event.type === 'arp-cache-miss' && event.actorNodeId === 'host-a',
+    )
+    const updateIndex = trace.events.findIndex(
+      (event) =>
+        event.type === 'arp-cache-updated' && event.actorNodeId === 'host-a',
+    )
+    const topologyAtMiss = applySimulationTraceToTopology(
+      topology,
+      trace,
+      missIndex,
+    )
+    const topologyAtUpdate = applySimulationTraceToTopology(
+      topology,
+      trace,
+      updateIndex,
+    )
+
+    expect(missIndex).toBeGreaterThanOrEqual(0)
+    expect(updateIndex).toBeGreaterThan(missIndex)
+    expect(hostById(topologyAtMiss, 'host-a').arpCache).toHaveLength(0)
+    expect(hostById(topologyAtUpdate, 'host-a').arpCache).toHaveLength(1)
+  })
+
   test('uses ARP Cache hits after dynamic tables are populated', () => {
     const topology = applyAutoConfiguration(firstMilestoneTopology())
     const firstTrace = simulateIpv4Packet(topology, {
@@ -364,6 +396,19 @@ function eventByType(
   }
 
   return event
+}
+
+function hostById(topology: TopologyState, id: string): HostNode {
+  const node = topology.nodes.find(
+    (candidate): candidate is HostNode =>
+      candidate.id === id && candidate.type === 'host',
+  )
+
+  if (!node) {
+    throw new Error(`Missing host ${id}`)
+  }
+
+  return node
 }
 
 function macAddressFor(value: string): string {

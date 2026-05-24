@@ -5,7 +5,12 @@ import type { PacketTrace, TopologyState } from './types'
 export function applySimulationTraceToTopology(
   topology: TopologyState,
   packetTrace: PacketTrace,
+  throughEventIndex?: number,
 ): TopologyState {
+  const events =
+    throughEventIndex === undefined
+      ? packetTrace.events
+      : packetTrace.events.slice(0, Math.max(throughEventIndex + 1, 0))
   const arpCacheByNodeId = new Map(
     topology.nodes
       .filter((node) => node.type === 'host' || node.type === 'router')
@@ -17,7 +22,7 @@ export function applySimulationTraceToTopology(
       .map((node) => [node.id, node.macAddressTable] as const),
   )
 
-  for (const event of packetTrace.events) {
+  for (const event of events) {
     if (event.type === 'arp-cache-updated' && event.actorNodeId) {
       const ipAddress = stringDetail(event.details, 'ipAddress')
       const macAddress = stringDetail(event.details, 'macAddress')
