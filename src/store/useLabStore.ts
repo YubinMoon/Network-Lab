@@ -338,14 +338,15 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   },
 
   loadFirstMilestoneTopology: () => {
-    set({
+    set((state) => ({
       topology: applyAutoConfiguration(createFirstMilestoneTopology()),
       selectedObject: null,
       simulationTrace: null,
       simulationBaseTopology: null,
       simulationStatus: 'idle',
       currentEventIndex: 0,
-    })
+      canvasFitRequestId: state.canvasFitRequestId + 1,
+    }))
   },
 
   sendPacket: (input) => {
@@ -435,14 +436,15 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       return
     }
 
-    set({
+    set((state) => ({
       topology: applyAutoConfiguration(topologyFromJson(json)),
       selectedObject: null,
       simulationTrace: null,
       simulationBaseTopology: null,
       simulationStatus: 'idle',
       currentEventIndex: 0,
-    })
+      canvasFitRequestId: state.canvasFitRequestId + 1,
+    }))
   },
 
   saveTopology: () => {
@@ -456,14 +458,15 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       return
     }
 
-    set({
+    set((state) => ({
       topology: applyAutoConfiguration(topology),
       selectedObject: null,
       simulationTrace: null,
       simulationBaseTopology: null,
       simulationStatus: 'idle',
       currentEventIndex: 0,
-    })
+      canvasFitRequestId: state.canvasFitRequestId + 1,
+    }))
   },
 
   createShareUrl: () => {
@@ -487,14 +490,15 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       return
     }
 
-    set({
+    set((state) => ({
       topology: applyAutoConfiguration(topology),
       selectedObject: null,
       simulationTrace: null,
       simulationBaseTopology: null,
       simulationStatus: 'idle',
       currentEventIndex: 0,
-    })
+      canvasFitRequestId: state.canvasFitRequestId + 1,
+    }))
   },
 
   loadExampleTopology: (example) => {

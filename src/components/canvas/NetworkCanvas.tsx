@@ -138,7 +138,6 @@ function NetworkCanvasFlow() {
       onNodeClick={(_, node) => selectNode(node.id)}
       onEdgeClick={(_, edge) => selectLink(edge.id)}
       onPaneClick={clearSelection}
-      fitView
       proOptions={{ hideAttribution: true }}
     >
       <Background />
