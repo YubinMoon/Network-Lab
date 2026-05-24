@@ -75,6 +75,34 @@ describe('Auto IP/MAC/Gateway assignment', () => {
     expect(hostById(configured, 'host-b').defaultGatewayIp).toBeUndefined()
   })
 
+  test('syncs interface link IDs from topology links', () => {
+    const hostA = host('host-a', 'Host A')
+    const switchS1 = switchNode('switch-s1', 'Switch S1', ['e0/1', 'e0/2'])
+    const hostB = host('host-b', 'Host B')
+    const configured = applyAutoConfiguration(
+      topologyState(
+        [hostA, switchS1, hostB],
+        [
+          link('link-1', endpoint(hostA, 'eth0'), endpoint(switchS1, 'e0/1')),
+          link('link-2', endpoint(switchS1, 'e0/2'), endpoint(hostB, 'eth0')),
+        ],
+      ),
+    )
+
+    expect(
+      interfaceByName(configured, 'host-a', 'eth0').connectedLinkIds,
+    ).toEqual(['link-1'])
+    expect(
+      interfaceByName(configured, 'switch-s1', 'e0/1').connectedLinkIds,
+    ).toEqual(['link-1'])
+    expect(
+      interfaceByName(configured, 'switch-s1', 'e0/2').connectedLinkIds,
+    ).toEqual(['link-2'])
+    expect(
+      interfaceByName(configured, 'host-b', 'eth0').connectedLinkIds,
+    ).toEqual(['link-2'])
+  })
+
   test('assigns both LANs in the first milestone topology', () => {
     const hostA = host('host-a', 'Host A')
     const switchS1 = switchNode('switch-s1', 'Switch S1', ['e0/1', 'e0/2'])

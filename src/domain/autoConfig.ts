@@ -5,6 +5,7 @@ import { applyNetworkSegments } from './segments'
 import type {
   HostNode,
   InterfaceId,
+  LinkId,
   NetworkInterface,
   NetworkNode,
   NetworkSegment,
@@ -19,7 +20,8 @@ interface InterfaceOwner {
 }
 
 export function applyAutoConfiguration(topology: TopologyState): TopologyState {
-  const segmentedTopology = applyNetworkSegments(topology)
+  const linkedTopology = syncInterfaceLinkIds(topology)
+  const segmentedTopology = applyNetworkSegments(linkedTopology)
 
   if (!segmentedTopology.settings.autoConfiguration) {
     return ensureMacAddresses(segmentedTopology)
@@ -45,6 +47,38 @@ export function applyAutoConfiguration(topology: TopologyState): TopologyState {
       ],
     })),
   })
+}
+
+function syncInterfaceLinkIds(topology: TopologyState): TopologyState {
+  const linkIdsByInterface = new Map<InterfaceId, LinkId[]>()
+
+  for (const node of topology.nodes) {
+    for (const networkInterface of node.interfaces) {
+      linkIdsByInterface.set(networkInterface.id, [])
+    }
+  }
+
+  for (const networkLink of topology.links) {
+    linkIdsByInterface
+      .get(networkLink.endpointA.interfaceId)
+      ?.push(networkLink.id)
+    linkIdsByInterface
+      .get(networkLink.endpointB.interfaceId)
+      ?.push(networkLink.id)
+  }
+
+  return {
+    ...topology,
+    nodes: topology.nodes.map((node) => ({
+      ...node,
+      interfaces: node.interfaces.map((networkInterface) => ({
+        ...networkInterface,
+        connectedLinkIds:
+          linkIdsByInterface.get(networkInterface.id) ??
+          networkInterface.connectedLinkIds,
+      })),
+    })),
+  }
 }
 
 function ensureMacAddresses(topology: TopologyState): TopologyState {

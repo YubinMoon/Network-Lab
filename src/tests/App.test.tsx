@@ -105,6 +105,71 @@ describe('App', () => {
     )
   })
 
+  test('uses a new Host interface when extending a loaded example Host', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load Example' }))
+
+    act(() => {
+      useLabStore.getState().addNode('host')
+    })
+
+    const hostC = nodeByName('Host C')
+
+    act(() => {
+      useLabStore.getState().addLink('host-b', hostC.id)
+    })
+
+    const topology = useLabStore.getState().topology
+    const hostB = topology.nodes.find((node) => node.id === 'host-b')
+    const switchSegment = topology.segments.find((segment) =>
+      segment.memberInterfaceIds.includes('switch-s1-e0-2'),
+    )
+    const hostCSegment = topology.segments.find((segment) =>
+      segment.memberInterfaceIds.includes(`${hostC.id}-eth0`),
+    )
+
+    expect(hostB?.type).toBe('host')
+
+    if (hostB?.type === 'host') {
+      expect(
+        hostB.interfaces.map((networkInterface) => networkInterface.name),
+      ).toEqual(['eth0', 'eth1'])
+      expect(hostB.interfaces[0].connectedLinkIds).toEqual(['link-2'])
+      expect(hostB.interfaces[1].connectedLinkIds).toHaveLength(1)
+    }
+
+    expect(switchSegment?.memberInterfaceIds).toContain('host-b-eth0')
+    expect(switchSegment?.memberInterfaceIds).not.toContain('host-b-eth1')
+    expect(switchSegment?.memberInterfaceIds).not.toContain(`${hostC.id}-eth0`)
+    expect(hostCSegment?.memberInterfaceIds).toEqual(
+      expect.arrayContaining(['host-b-eth1', `${hostC.id}-eth0`]),
+    )
+
+    act(() => {
+      useLabStore.getState().sendPacket({
+        sourceHostId: 'host-a',
+        destinationMode: 'host',
+        targetHostId: hostC.id,
+        packetType: 'generic-ipv4',
+        ttl: 64,
+        packetCount: 1,
+        intervalMs: 500,
+        payload: 'Hello',
+      })
+    })
+
+    const trace = useLabStore.getState().simulationTrace
+
+    expect(trace?.result).toEqual({
+      status: 'dropped',
+      reason: 'No Default Gateway',
+    })
+    expect(trace?.events.some((event) => event.actorNodeId === hostC.id)).toBe(
+      false,
+    )
+  })
+
   test('loads the first milestone topology', () => {
     render(<App />)
 
