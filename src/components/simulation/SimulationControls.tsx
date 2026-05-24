@@ -14,6 +14,12 @@ export function SimulationControls() {
   const setSimulationSpeed = useLabStore((state) => state.setSimulationSpeed)
   const resetDynamicTables = useLabStore((state) => state.resetDynamicTables)
   const clearSimulationTrace = useLabStore((state) => state.clearSimulationTrace)
+  const isRunning = simulationStatus === 'running'
+  const playbackLabel = isRunning ? 'Pause' : 'Play'
+  const playbackClassName = isRunning
+    ? 'simulation-toggle-button pause'
+    : 'simulation-toggle-button play'
+  const togglePlayback = isRunning ? pauseSimulation : playSimulation
 
   useEffect(() => {
     if (simulationStatus !== 'running') {
@@ -27,11 +33,12 @@ export function SimulationControls() {
 
   return (
     <div className="simulation-controls" aria-label="Simulation Controls">
-      <button type="button" onClick={playSimulation}>
-        Play
-      </button>
-      <button type="button" onClick={pauseSimulation}>
-        Pause
+      <button
+        type="button"
+        className={playbackClassName}
+        onClick={togglePlayback}
+      >
+        {playbackLabel}
       </button>
       <button type="button" onClick={previousEvent}>
         Previous Event

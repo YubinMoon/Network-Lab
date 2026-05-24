@@ -58,6 +58,31 @@ describe('App', () => {
     expect(container.querySelector('.link-edge-label')).not.toBeInTheDocument()
   })
 
+  test('uses one colored playback toggle button', () => {
+    render(<App />)
+
+    const initialPlayButton = screen.getByRole('button', { name: 'Play' })
+
+    expect(initialPlayButton).toHaveClass('play')
+    expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Load First Milestone' }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+
+    const pauseButton = screen.getByRole('button', { name: 'Pause' })
+
+    expect(pauseButton).toHaveClass('pause')
+    expect(useLabStore.getState().simulationStatus).toBe('running')
+
+    fireEvent.click(pauseButton)
+
+    expect(screen.getByRole('button', { name: 'Play' })).toHaveClass('play')
+    expect(useLabStore.getState().simulationStatus).toBe('paused')
+  })
+
   test('sends a packet from the Packet Generator', () => {
     render(<App />)
 

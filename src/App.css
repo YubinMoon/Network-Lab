@@ -482,6 +482,31 @@ dd {
   width: 100%;
 }
 
+.simulation-toggle-button {
+  border-color: transparent;
+  font-weight: 750;
+}
+
+.simulation-toggle-button.play {
+  background: var(--success);
+  color: #07130e;
+}
+
+.simulation-toggle-button.play:hover {
+  border-color: var(--success);
+  background: #7be0af;
+}
+
+.simulation-toggle-button.pause {
+  background: var(--danger);
+  color: #210b0d;
+}
+
+.simulation-toggle-button.pause:hover {
+  border-color: var(--danger);
+  background: #ff9494;
+}
+
 .palette .simulation-controls select,
 .palette .simulation-controls span {
   grid-column: 1 / -1;
