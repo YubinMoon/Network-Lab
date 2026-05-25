@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { applyAutoConfiguration } from '../domain/autoConfig'
 import { applySimulationTraceToTopology } from '../domain/dynamicTables'
 import {
@@ -325,43 +325,41 @@ describe('IPv4 forwarding simulation', () => {
     expect(arpEvents(trace.events, 'router-r1', 'arp-cache-hit')).toHaveLength(2)
   })
 
-  test('round-robins equal-metric auto routes at each router per packet', () => {
+  test('randomly selects equal-metric auto routes at a router lookup', () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.99)
     const topology = applyAutoConfiguration(routerMeshWithSourceTopology())
     const destinationIp = interfaceByName(topology, 'host-c', 'eth0').ipAddress
 
     expect(destinationIp).toBeTruthy()
 
-    const trace = simulateIpv4PacketBatch(topology, {
-      sourceHostId: 'host-a',
-      destinationIp: destinationIp ?? '0.0.0.0',
-      ttl: 12,
-      packetType: 'generic-ipv4',
-      packetCount: 3,
-    })
-    const firstR6OutInterfaceByPacket = new Map<string, unknown>()
+    try {
+      const trace = simulateIpv4PacketBatch(topology, {
+        sourceHostId: 'host-a',
+        destinationIp: destinationIp ?? '0.0.0.0',
+        ttl: 12,
+        packetType: 'generic-ipv4',
+        packetCount: 1,
+      })
+      const firstR6NextHopEvent = trace.events.find(
+        (event) =>
+          event.type === 'router-next-hop-selected' &&
+          event.actorNodeId === 'router-r6',
+      )
 
-    for (const event of trace.events) {
-      if (
-        event.type === 'router-next-hop-selected' &&
-        event.actorNodeId === 'router-r6' &&
-        event.packetId &&
-        !firstR6OutInterfaceByPacket.has(event.packetId)
-      ) {
-        firstR6OutInterfaceByPacket.set(
-          event.packetId,
-          event.details?.outInterfaceId,
-        )
-      }
+      expect(firstR6NextHopEvent?.details?.outInterfaceId).toBe(
+        'router-r6-g0-2',
+      )
+    } finally {
+      randomSpy.mockRestore()
     }
-
-    expect([...firstR6OutInterfaceByPacket.values()]).toEqual([
-      'router-r6-g0-0',
-      'router-r6-g0-1',
-      'router-r6-g0-2',
-    ])
   })
 
-  test('advances equal-metric route selection when a packet revisits a router', () => {
+  test('uses a fresh random route choice when a packet revisits a router', () => {
+    const randomSpy = vi
+      .spyOn(Math, 'random')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0.75)
+      .mockReturnValue(0)
     const topology = topologyWithManualRoutes(
       applyAutoConfiguration(revisitingRouterTopology()),
     )
@@ -369,24 +367,28 @@ describe('IPv4 forwarding simulation', () => {
 
     expect(destinationIp).toBeTruthy()
 
-    const trace = simulateIpv4Packet(topology, {
-      sourceHostId: 'host-a',
-      destinationIp: destinationIp ?? '0.0.0.0',
-      ttl: 12,
-      packetType: 'generic-ipv4',
-    })
-    const nextHopEvents = trace.events
-      .filter((event) => event.type === 'router-next-hop-selected')
-      .map((event) => ({
-        routerId: event.actorNodeId,
-        outInterfaceId: event.details?.outInterfaceId,
-      }))
+    try {
+      const trace = simulateIpv4Packet(topology, {
+        sourceHostId: 'host-a',
+        destinationIp: destinationIp ?? '0.0.0.0',
+        ttl: 12,
+        packetType: 'generic-ipv4',
+      })
+      const nextHopEvents = trace.events
+        .filter((event) => event.type === 'router-next-hop-selected')
+        .map((event) => ({
+          routerId: event.actorNodeId,
+          outInterfaceId: event.details?.outInterfaceId,
+        }))
 
-    expect(nextHopEvents.slice(0, 3)).toEqual([
-      { routerId: 'router-r1', outInterfaceId: 'router-r1-g0-0' },
-      { routerId: 'router-r2', outInterfaceId: 'router-r2-g0-0' },
-      { routerId: 'router-r1', outInterfaceId: 'router-r1-g0-1' },
-    ])
+      expect(nextHopEvents.slice(0, 3)).toEqual([
+        { routerId: 'router-r1', outInterfaceId: 'router-r1-g0-0' },
+        { routerId: 'router-r2', outInterfaceId: 'router-r2-g0-0' },
+        { routerId: 'router-r1', outInterfaceId: 'router-r1-g0-1' },
+      ])
+    } finally {
+      randomSpy.mockRestore()
+    }
   })
 })
 

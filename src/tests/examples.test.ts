@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { applyAutoConfiguration } from '../domain/autoConfig'
 import { simulateIpv4PacketBatch } from '../domain/simulation'
 import type { LinkEndpoint, TopologyState } from '../domain/types'
@@ -9,7 +9,7 @@ const requiredExampleNames = [
   'Same LAN Communication',
   'Default Gateway Forwarding',
   'Router-to-Router Forwarding',
-  'MTU Fragmentation and Round Robin',
+  'MTU Fragmentation and Random Routing',
   'No Matching Route',
 ]
 
@@ -106,57 +106,66 @@ describe('Example topologies', () => {
     }
   })
 
-  test('fragmentation example round-robins equal routes and emits fragment events', () => {
+  test('fragmentation example can randomly use equal routes and emit fragment events', () => {
+    const randomSpy = vi
+      .spyOn(Math, 'random')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0.99)
+      .mockReturnValue(0)
     const example = EXAMPLE_TOPOLOGIES.find(
-      (candidate) => candidate.id === 'fragmentation-round-robin',
+      (candidate) => candidate.id === 'fragmentation-random-routing',
     )
 
-    expect(example).toBeTruthy()
+    try {
+      expect(example).toBeTruthy()
 
-    if (!example) {
-      return
-    }
+      if (!example) {
+        return
+      }
 
-    const topology = applyAutoConfiguration(example.topology)
-    const destinationIp = topology.nodes
-      .find((node) => node.id === example.packet.targetHostId)
-      ?.interfaces[0]?.ipAddress
+      const topology = applyAutoConfiguration(example.topology)
+      const destinationIp = topology.nodes
+        .find((node) => node.id === example.packet.targetHostId)
+        ?.interfaces[0]?.ipAddress
 
-    expect(destinationIp).toBe('10.0.2.10')
+      expect(destinationIp).toBe('10.0.2.10')
 
-    const trace = simulateIpv4PacketBatch(topology, {
-      sourceHostId: example.packet.sourceHostId,
-      destinationIp: destinationIp ?? '0.0.0.0',
-      ttl: example.packet.ttl,
-      packetType: example.packet.packetType,
-      payload: example.packet.payload,
-      packetCount: example.packet.packetCount,
-      intervalMs: example.packet.intervalMs,
-    })
-    const r1RouteIds = trace.events
-      .filter(
-        (event) =>
-          event.type === 'router-route-selected' &&
-          event.actorNodeId === 'router-r1',
+      const trace = simulateIpv4PacketBatch(topology, {
+        sourceHostId: example.packet.sourceHostId,
+        destinationIp: destinationIp ?? '0.0.0.0',
+        ttl: example.packet.ttl,
+        packetType: example.packet.packetType,
+        payload: example.packet.payload,
+        packetCount: example.packet.packetCount,
+        intervalMs: example.packet.intervalMs,
+      })
+      const r1RouteIds = trace.events
+        .filter(
+          (event) =>
+            event.type === 'router-route-selected' &&
+            event.actorNodeId === 'router-r1',
+        )
+        .map((event) => (event.details?.selectedRoute as { id: string }).id)
+      const fragmentEvents = trace.events.filter(
+        (event) => event.type === 'ipv4-datagram-fragmented',
       )
-      .map((event) => (event.details?.selectedRoute as { id: string }).id)
-    const fragmentEvents = trace.events.filter(
-      (event) => event.type === 'ipv4-datagram-fragmented',
-    )
 
-    expect(trace.result.status).toBe('delivered')
-    expect(r1RouteIds).toEqual([
-      'route-r1-manual-via-r2',
-      'route-r1-manual-via-r3',
-    ])
-    expect(fragmentEvents.map((event) => event.details?.mtu)).toEqual([80, 120])
-    expect(
-      fragmentEvents.every(
-        (event) =>
-          Array.isArray(event.details?.fragments) &&
-          event.details.fragments.length > 1,
-      ),
-    ).toBe(true)
+      expect(trace.result.status).toBe('delivered')
+      expect(r1RouteIds).toEqual([
+        'route-r1-manual-via-r2',
+        'route-r1-manual-via-r3',
+      ])
+      expect(fragmentEvents.map((event) => event.details?.mtu)).toEqual([80, 120])
+      expect(
+        fragmentEvents.every(
+          (event) =>
+            Array.isArray(event.details?.fragments) &&
+            event.details.fragments.length > 1,
+        ),
+      ).toBe(true)
+    } finally {
+      randomSpy.mockRestore()
+    }
   })
 })
 

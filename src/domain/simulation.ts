@@ -64,7 +64,6 @@ interface SimulationRunOptions {
   allowIcmpReply: boolean
   icmpReply: boolean
   replyPacketId?: string
-  routeSelectionIndex?: number
 }
 
 export function simulateIpv4Packet(
@@ -125,7 +124,6 @@ export function simulateIpv4PacketBatch(
       allowIcmpReply: true,
       icmpReply: false,
       replyPacketId: `${packetId}-reply`,
-      routeSelectionIndex: index,
     })
 
     packetTraces.push(packetTrace)
@@ -438,13 +436,8 @@ function forwardThroughRouters(
     datagram: initialDatagram,
   })
   const maxHops = Math.max(1, initialDatagram.ttl)
-  const routerArrivalCounts = new Map<string, number>()
 
   for (let hop = 0; hop < maxHops; hop += 1) {
-    const routerArrivalCount = routerArrivalCounts.get(currentRouter.id) ?? 0
-
-    routerArrivalCounts.set(currentRouter.id, routerArrivalCount + 1)
-
     const routerResult = forwardAtRouterWithEvents(
       topology,
       currentRouter,
@@ -452,7 +445,6 @@ function forwardThroughRouters(
       incomingFrame,
       `frame-${hop + 2}`,
       eventBuilder,
-      (options.routeSelectionIndex ?? 0) + routerArrivalCount,
     )
 
     if (routerResult.status === 'dropped') {
@@ -543,7 +535,6 @@ function forwardAtRouterWithEvents(
   frame: EthernetFrame,
   nextFrameId: string,
   eventBuilder: ReturnType<typeof createEventBuilder>,
-  routeSelectionIndex?: number,
 ) {
   const datagram = frame.payload as IPv4Datagram
 
@@ -573,7 +564,6 @@ function forwardAtRouterWithEvents(
     resolveMacForIp: (ipAddress) =>
       interfaceByIp(topology, ipAddress)?.networkInterface.macAddress,
     frameId: nextFrameId,
-    routeSelectionIndex,
   })
 
   if (result.previousTtl !== undefined && result.datagram) {
@@ -1412,7 +1402,6 @@ function maybeReplyToIcmpEcho(
       packetId: options.replyPacketId ?? `${packetId}-reply`,
       allowIcmpReply: false,
       icmpReply: true,
-      routeSelectionIndex: options.routeSelectionIndex,
     },
   )
   const events = [

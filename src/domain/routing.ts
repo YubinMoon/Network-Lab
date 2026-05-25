@@ -144,7 +144,7 @@ export function generateAutoStaticRoutes(
 export function lookupRoute(
   dstIp: string,
   routes: RouteEntry[],
-  options: { selectionIndex?: number } = {},
+  options: { random?: () => number } = {},
 ): RouteLookupResult {
   const candidates = routes
     .filter((route) => route.enabled)
@@ -178,16 +178,33 @@ export function lookupRoute(
     (candidate) =>
       compareRouteEntries(candidate.route, matchedCandidates[0].route) === 0,
   )
-  const selectedIndex =
-    bestCandidates.length > 0
-      ? (options.selectionIndex ?? 0) % bestCandidates.length
-      : 0
+  const selectedIndex = randomCandidateIndex(
+    bestCandidates.length,
+    options.random ?? Math.random,
+  )
 
   return {
     selectedRoute: bestCandidates[selectedIndex]?.route ?? matchedCandidates[0].route,
     candidates,
     reason: 'longest-prefix-match',
   }
+}
+
+function randomCandidateIndex(candidateCount: number, random: () => number): number {
+  if (candidateCount <= 1) {
+    return 0
+  }
+
+  const value = random()
+
+  if (!Number.isFinite(value)) {
+    return 0
+  }
+
+  return Math.min(
+    candidateCount - 1,
+    Math.max(0, Math.floor(value * candidateCount)),
+  )
 }
 
 function compareRouteEntries(a: RouteEntry, b: RouteEntry): number {

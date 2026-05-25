@@ -78,7 +78,7 @@ export function forwardIpv4FrameAtRouter({
   resolveMacForIp,
   frameId,
   outMtu,
-  routeSelectionIndex,
+  routeRandom,
 }: {
   router: RouterNode
   ingressInterfaceId: string
@@ -86,7 +86,7 @@ export function forwardIpv4FrameAtRouter({
   resolveMacForIp: (ipAddress: string) => string | undefined
   frameId: string
   outMtu?: number
-  routeSelectionIndex?: number
+  routeRandom?: () => number
 }): RouterForwardingResult {
   const ingressInterface = router.interfaces.find(
     (networkInterface) => networkInterface.id === ingressInterfaceId,
@@ -121,7 +121,7 @@ export function forwardIpv4FrameAtRouter({
   }
 
   const routeLookup = lookupRoute(datagram.dstIp, router.routingTable, {
-    selectionIndex: routeSelectionIndex,
+    random: routeRandom,
   })
   const selectedRoute = routeLookup.selectedRoute
 

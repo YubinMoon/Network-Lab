@@ -45,9 +45,9 @@ export const EXAMPLE_TOPOLOGIES: ExampleTopology[] = [
     packet: hostPacket('host-a', 'host-b', 'icmp-echo'),
   },
   {
-    id: 'fragmentation-round-robin',
-    name: 'MTU Fragmentation and Round Robin',
-    topology: fragmentationRoundRobinTopology(),
+    id: 'fragmentation-random-routing',
+    name: 'MTU Fragmentation and Random Routing',
+    topology: fragmentationRandomRoutingTopology(),
     packet: {
       ...hostPacket('host-a', 'host-b', 'generic-ipv4'),
       packetCount: 2,
@@ -128,7 +128,7 @@ function twoRouterTopology(): TopologyState {
   )
 }
 
-function fragmentationRoundRobinTopology(): TopologyState {
+function fragmentationRandomRoutingTopology(): TopologyState {
   const hostA = host('host-a', 'Host A')
   const switchS1 = switchNode('switch-s1', 'Switch S1', ['e0/1', 'e0/2'])
   const routerR1 = {

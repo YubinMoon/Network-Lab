@@ -117,20 +117,21 @@ describe('Longest Prefix Match', () => {
     expect(result.selectedRoute?.id).toBe('connected')
   })
 
-  test('round-robins across equal best routes when a selection index is provided', () => {
+  test('randomly selects across equal best routes', () => {
     const routes = [
       route('path-a', '10.0.2.0', 24, 'manual-static'),
       route('path-b', '10.0.2.0', 24, 'manual-static'),
     ]
 
     expect(
-      lookupRoute('10.0.2.10', routes, { selectionIndex: 0 }).selectedRoute?.id,
+      lookupRoute('10.0.2.10', routes, { random: () => 0 }).selectedRoute?.id,
     ).toBe('path-a')
     expect(
-      lookupRoute('10.0.2.10', routes, { selectionIndex: 1 }).selectedRoute?.id,
+      lookupRoute('10.0.2.10', routes, { random: () => 0.99 }).selectedRoute?.id,
     ).toBe('path-b')
     expect(
-      lookupRoute('10.0.2.10', routes, { selectionIndex: 2 }).selectedRoute?.id,
+      lookupRoute('10.0.2.10', routes, { random: () => Number.NaN })
+        .selectedRoute?.id,
     ).toBe('path-a')
   })
 
