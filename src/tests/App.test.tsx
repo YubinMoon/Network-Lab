@@ -195,6 +195,28 @@ describe('App', () => {
     expect(useLabStore.getState().topology.segments).toHaveLength(2)
   })
 
+  test('loads fragmentation example packet defaults into the Packet Generator', () => {
+    render(<App />)
+
+    loadExampleById('fragmentation-random-routing')
+
+    expect(screen.getByLabelText('Packet Type')).toHaveValue('generic-ipv4')
+    expect(screen.getByLabelText('Packet Count')).toHaveValue(2)
+    expect(screen.getByLabelText('Payload')).toHaveValue(
+      'Fragmentation payload '.repeat(12),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    expect(
+      useLabStore
+        .getState()
+        .simulationTrace?.events.some(
+          (event) => event.type === 'ipv4-datagram-fragmented',
+        ),
+    ).toBe(true)
+  })
+
   test('continues Router names from the highest existing Router number', () => {
     act(() => {
       useLabStore.getState().addNode('router')
@@ -509,10 +531,14 @@ function sectionByHeading(container: HTMLElement, name: string): HTMLElement {
 }
 
 function loadDefaultGatewayExample(): void {
+  loadExampleById('default-gateway')
+}
+
+function loadExampleById(exampleId: string): void {
   const examples = within(screen.getByLabelText('Examples'))
 
   fireEvent.change(examples.getByRole('combobox'), {
-    target: { value: 'default-gateway' },
+    target: { value: exampleId },
   })
   fireEvent.click(screen.getByRole('button', { name: 'Load Example' }))
 }

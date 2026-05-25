@@ -169,6 +169,25 @@ describe('Example topologies', () => {
     }
   })
 
+  test('fragmentation example exposes visible low-MTU bottleneck links', () => {
+    const example = EXAMPLE_TOPOLOGIES.find(
+      (candidate) => candidate.id === 'fragmentation-random-routing',
+    )
+
+    expect(example).toBeTruthy()
+
+    if (!example) {
+      return
+    }
+
+    expect(
+      example.topology.links
+        .filter((networkLink) => networkLink.mtu < 1500)
+        .map((networkLink) => networkLink.mtu)
+        .sort((a, b) => a - b),
+    ).toEqual([80, 120, 140])
+  })
+
   test('redundant router mesh example uses two Hosts and nine Routers', () => {
     const example = EXAMPLE_TOPOLOGIES.find(
       (candidate) => candidate.id === 'redundant-router-mesh',

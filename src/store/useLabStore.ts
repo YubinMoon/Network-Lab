@@ -48,6 +48,8 @@ interface LabStoreState {
   currentEventIndex: number
   simulationSpeed: number
   canvasFitRequestId: number
+  packetGeneratorInput: PacketGeneratorInput
+  packetGeneratorInputRevision: number
   lastExportJson: string
   lastShareUrl: string
   addNode: (type: NodeType) => void
@@ -86,6 +88,18 @@ const emptyTopology = (): TopologyState => ({
   settings: DEFAULT_LAB_SETTINGS,
 })
 
+const defaultPacketGeneratorInput = (): PacketGeneratorInput => ({
+  sourceHostId: '',
+  destinationMode: 'host',
+  targetHostId: '',
+  destinationIp: '',
+  packetType: 'icmp-echo',
+  ttl: DEFAULT_LAB_SETTINGS.defaultTtl,
+  packetCount: 1,
+  intervalMs: DEFAULT_LAB_SETTINGS.defaultPacketIntervalMs,
+  payload: 'Hello',
+})
+
 function topologyForCurrentEvent(state: LabStoreState): TopologyState {
   if (!state.simulationBaseTopology || !state.simulationTrace) {
     return state.topology
@@ -120,6 +134,8 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   currentEventIndex: 0,
   simulationSpeed: 1,
   canvasFitRequestId: 0,
+  packetGeneratorInput: defaultPacketGeneratorInput(),
+  packetGeneratorInputRevision: 0,
   lastExportJson: '',
   lastShareUrl: '',
 
@@ -323,14 +339,16 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   },
 
   clearTopology: () => {
-    set({
+    set((state) => ({
       topology: emptyTopology(),
       selectedObject: null,
       simulationTrace: null,
       simulationBaseTopology: null,
       simulationStatus: 'idle',
       currentEventIndex: 0,
-    })
+      packetGeneratorInput: defaultPacketGeneratorInput(),
+      packetGeneratorInputRevision: state.packetGeneratorInputRevision + 1,
+    }))
   },
 
   resetDynamicTables: () => {
@@ -543,6 +561,8 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       simulationStatus: simulationTrace ? 'paused' : 'idle',
       currentEventIndex: 0,
       canvasFitRequestId: state.canvasFitRequestId + 1,
+      packetGeneratorInput: { ...example.packet },
+      packetGeneratorInputRevision: state.packetGeneratorInputRevision + 1,
     }))
   },
 }))

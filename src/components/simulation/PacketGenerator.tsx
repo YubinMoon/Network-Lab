@@ -1,23 +1,51 @@
 import { useMemo, useState } from 'react'
 import { useLabStore } from '../../store/useLabStore'
-import type { DestinationMode, PacketType } from '../../domain/types'
+import type {
+  DestinationMode,
+  PacketGeneratorInput,
+  PacketType,
+} from '../../domain/types'
 
 export function PacketGenerator() {
+  const packetGeneratorInput = useLabStore((state) => state.packetGeneratorInput)
+  const packetGeneratorInputRevision = useLabStore(
+    (state) => state.packetGeneratorInputRevision,
+  )
+
+  return (
+    <PacketGeneratorForm
+      key={packetGeneratorInputRevision}
+      initialInput={packetGeneratorInput}
+    />
+  )
+}
+
+function PacketGeneratorForm({
+  initialInput,
+}: {
+  initialInput: PacketGeneratorInput
+}) {
   const topology = useLabStore((state) => state.topology)
   const sendPacket = useLabStore((state) => state.sendPacket)
   const hosts = useMemo(
     () => topology.nodes.filter((node) => node.type === 'host'),
     [topology.nodes],
   )
-  const [sourceHostId, setSourceHostId] = useState('')
-  const [targetHostId, setTargetHostId] = useState('')
+  const [sourceHostId, setSourceHostId] = useState(initialInput.sourceHostId)
+  const [targetHostId, setTargetHostId] = useState(
+    initialInput.targetHostId ?? '',
+  )
   const [destinationMode, setDestinationMode] =
-    useState<DestinationMode>('host')
-  const [destinationIp, setDestinationIp] = useState('')
-  const [packetType, setPacketType] = useState<PacketType>('icmp-echo')
-  const [ttl, setTtl] = useState(topology.settings.defaultTtl)
-  const [packetCount, setPacketCount] = useState(1)
-  const [payload, setPayload] = useState('Hello')
+    useState<DestinationMode>(initialInput.destinationMode)
+  const [destinationIp, setDestinationIp] = useState(
+    initialInput.destinationIp ?? '',
+  )
+  const [packetType, setPacketType] = useState<PacketType>(
+    initialInput.packetType,
+  )
+  const [ttl, setTtl] = useState(initialInput.ttl)
+  const [packetCount, setPacketCount] = useState(initialInput.packetCount)
+  const [payload, setPayload] = useState(initialInput.payload ?? '')
   const selectedSourceHostId = hosts.some((host) => host.id === sourceHostId)
     ? sourceHostId
     : hosts[0]?.id ?? ''

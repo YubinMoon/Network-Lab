@@ -136,10 +136,18 @@ function twoRouterTopology(): TopologyState {
 }
 
 function fragmentationRandomRoutingTopology(): TopologyState {
-  const hostA = host('host-a', 'Host A')
-  const switchS1 = switchNode('switch-s1', 'Switch S1', ['e0/1', 'e0/2'])
+  const hostA = positioned(host('host-a', 'Host A'), 60, 260)
+  const switchS1 = positioned(
+    switchNode('switch-s1', 'Switch S1', ['e0/1', 'e0/2']),
+    260,
+    260,
+  )
   const routerR1 = {
-    ...router('router-r1', 'Router R1', ['g0/0', 'g0/1', 'g0/2']),
+    ...positioned(
+      router('router-r1', 'Router R1', ['g0/0', 'g0/1', 'g0/2']),
+      470,
+      260,
+    ),
     routingTable: [
       {
         id: 'route-r1-manual-via-r2',
@@ -163,27 +171,37 @@ function fragmentationRandomRoutingTopology(): TopologyState {
       },
     ],
   } satisfies RouterNode
-  const routerR2 = router('router-r2', 'Router R2', ['g0/0', 'g0/1'])
-  const routerR3 = router('router-r3', 'Router R3', ['g0/0', 'g0/1'])
-  const switchS2 = switchNode('switch-s2', 'Switch S2', [
-    'e0/1',
-    'e0/2',
-    'e0/3',
-  ])
-  const hostB = host('host-b', 'Host B')
+  const routerR2 = positioned(
+    router('router-r2', 'Router R2', ['g0/0', 'g0/1']),
+    710,
+    130,
+  )
+  const routerR3 = positioned(
+    router('router-r3', 'Router R3', ['g0/0', 'g0/1']),
+    710,
+    390,
+  )
+  const switchS2 = positioned(
+    switchNode('switch-s2', 'Switch S2', ['e0/1', 'e0/2', 'e0/3']),
+    960,
+    260,
+  )
+  const hostB = positioned(host('host-b', 'Host B'), 1180, 260)
 
-  return topologyState(
-    [hostA, switchS1, routerR1, routerR2, routerR3, switchS2, hostB],
-    [
+  return {
+    nodes: [hostA, switchS1, routerR1, routerR2, routerR3, switchS2, hostB],
+    links: [
       link('link-1', endpoint(hostA, 'eth0'), endpoint(switchS1, 'e0/1')),
       link('link-2', endpoint(switchS1, 'e0/2'), endpoint(routerR1, 'g0/0')),
       link('link-3', endpoint(routerR1, 'g0/1'), endpoint(routerR2, 'g0/0')),
       link('link-4', endpoint(routerR1, 'g0/2'), endpoint(routerR3, 'g0/0')),
       link('link-5', endpoint(routerR2, 'g0/1'), endpoint(switchS2, 'e0/1'), 80),
       link('link-6', endpoint(routerR3, 'g0/1'), endpoint(switchS2, 'e0/2'), 120),
-      link('link-7', endpoint(switchS2, 'e0/3'), endpoint(hostB, 'eth0')),
+      link('link-7', endpoint(switchS2, 'e0/3'), endpoint(hostB, 'eth0'), 140),
     ],
-  )
+    segments: [],
+    settings: DEFAULT_LAB_SETTINGS,
+  }
 }
 
 function redundantRouterMeshTopology(): TopologyState {
