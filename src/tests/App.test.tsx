@@ -8,6 +8,7 @@ import {
 } from '@testing-library/react'
 import { beforeEach, describe, expect, test } from 'vitest'
 import App from '../App'
+import { EXAMPLE_TOPOLOGIES } from '../examples/topologies'
 import { useLabStore } from '../store/useLabStore'
 
 describe('App', () => {
@@ -24,6 +25,9 @@ describe('App', () => {
       }),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Host' })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Load First Milestone' }),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole('navigation', { name: 'Primary' }),
     ).not.toBeInTheDocument()
@@ -173,12 +177,10 @@ describe('App', () => {
     )
   })
 
-  test('loads the first milestone topology', () => {
+  test('loads the default gateway example topology', () => {
     render(<App />)
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Load First Milestone' }),
-    )
+    loadDefaultGatewayExample()
 
     expect(screen.getAllByText('Host A').length).toBeGreaterThan(0)
     expect(screen.getByText('Router R1')).toBeInTheDocument()
@@ -215,7 +217,7 @@ describe('App', () => {
 
   test('uses sequential Router IDs in generated interface IDs', () => {
     act(() => {
-      useLabStore.getState().loadFirstMilestoneTopology()
+      useLabStore.getState().loadExampleTopology(defaultGatewayExample())
       useLabStore.getState().addNode('router')
       useLabStore.getState().addLink('router-r2', nodeByName('Switch S2').id)
     })
@@ -233,9 +235,7 @@ describe('App', () => {
   test('hides normal link status labels by default', () => {
     const { container } = render(<App />)
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Load First Milestone' }),
-    )
+    loadDefaultGatewayExample()
 
     expect(container.querySelector('.link-edge-label')).not.toBeInTheDocument()
   })
@@ -254,9 +254,7 @@ describe('App', () => {
     )
     expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument()
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Load First Milestone' }),
-    )
+    loadDefaultGatewayExample()
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     fireEvent.click(screen.getByRole('button', { name: 'Play' }))
 
@@ -274,9 +272,7 @@ describe('App', () => {
   test('does not show endpoint MAC addresses for switch interfaces', () => {
     render(<App />)
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Load First Milestone' }),
-    )
+    loadDefaultGatewayExample()
 
     const switchId = useLabStore
       .getState()
@@ -461,9 +457,7 @@ describe('App', () => {
   test('sends a packet from the Packet Generator', () => {
     render(<App />)
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Load First Milestone' }),
-    )
+    loadDefaultGatewayExample()
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
 
     expect(useLabStore.getState().simulationTrace?.result.status).toBe(
@@ -477,9 +471,7 @@ describe('App', () => {
   test('imports the visible JSON after exporting a topology', async () => {
     render(<App />)
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Load First Milestone' }),
-    )
+    loadDefaultGatewayExample()
     fireEvent.click(screen.getByRole('button', { name: 'Export JSON' }))
 
     await waitFor(() => {
@@ -508,6 +500,27 @@ function sectionByHeading(container: HTMLElement, name: string): HTMLElement {
   }
 
   return section
+}
+
+function loadDefaultGatewayExample(): void {
+  const examples = within(screen.getByLabelText('Examples'))
+
+  fireEvent.change(examples.getByRole('combobox'), {
+    target: { value: 'default-gateway' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Load Example' }))
+}
+
+function defaultGatewayExample() {
+  const example = EXAMPLE_TOPOLOGIES.find(
+    (candidate) => candidate.id === 'default-gateway',
+  )
+
+  if (!example) {
+    throw new Error('Missing default-gateway example')
+  }
+
+  return example
 }
 
 function nodeByName(name: string) {

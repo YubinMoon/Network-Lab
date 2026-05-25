@@ -19,9 +19,6 @@ const paletteItems: Array<{ label: string; type: NodeType }> = [
 function App() {
   const addNode = useLabStore((state) => state.addNode)
   const clearTopology = useLabStore((state) => state.clearTopology)
-  const loadFirstMilestoneTopology = useLabStore(
-    (state) => state.loadFirstMilestoneTopology,
-  )
   const loadTopologyFromHash = useLabStore((state) => state.loadTopologyFromHash)
   const segmentCount = useLabStore((state) => state.topology.segments.length)
 
@@ -50,9 +47,6 @@ function App() {
             ))}
           </div>
           <div className="topology-actions">
-            <button type="button" onClick={loadFirstMilestoneTopology}>
-              Load First Milestone
-            </button>
             <button type="button" onClick={clearTopology}>
               Clear
             </button>

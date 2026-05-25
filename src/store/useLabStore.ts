@@ -63,7 +63,6 @@ interface LabStoreState {
   clearTopology: () => void
   resetDynamicTables: () => void
   clearSimulationTrace: () => void
-  loadFirstMilestoneTopology: () => void
   sendPacket: (input: PacketGeneratorInput) => void
   playSimulation: () => void
   pauseSimulation: () => void
@@ -361,18 +360,6 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       simulationBaseTopology: null,
       simulationStatus: 'idle',
       currentEventIndex: 0,
-    }))
-  },
-
-  loadFirstMilestoneTopology: () => {
-    set((state) => ({
-      topology: applyAutoConfiguration(createFirstMilestoneTopology()),
-      selectedObject: null,
-      simulationTrace: null,
-      simulationBaseTopology: null,
-      simulationStatus: 'idle',
-      currentEventIndex: 0,
-      canvasFitRequestId: state.canvasFitRequestId + 1,
     }))
   },
 
@@ -762,66 +749,6 @@ function linksSameNodes(
     (link.endpointA.nodeId === targetNodeId &&
       link.endpointB.nodeId === sourceNodeId)
   )
-}
-
-function createFirstMilestoneTopology(): TopologyState {
-  const hostA = createNode('host', [])
-  const switchS1 = createNode('switch', [hostA])
-  const routerR1 = createNode('router', [hostA, switchS1])
-  const switchS2 = createNode('switch', [hostA, switchS1, routerR1])
-  const hostB = createNode('host', [hostA, switchS1, routerR1, switchS2])
-  const nodeMap = new Map(
-    [hostA, switchS1, routerR1, switchS2, hostB].map((node) => [node.id, node]),
-  )
-  const links: NetworkLink[] = []
-
-  addTopologyLink(nodeMap, links, hostA.id, switchS1.id)
-  addTopologyLink(nodeMap, links, switchS1.id, routerR1.id)
-  addTopologyLink(nodeMap, links, routerR1.id, switchS2.id)
-  addTopologyLink(nodeMap, links, switchS2.id, hostB.id)
-
-  return {
-    nodes: Array.from(nodeMap.values()),
-    links,
-    segments: [],
-    settings: DEFAULT_LAB_SETTINGS,
-  }
-}
-
-function addTopologyLink(
-  nodeMap: Map<NodeId, NetworkNode>,
-  links: NetworkLink[],
-  sourceNodeId: NodeId,
-  targetNodeId: NodeId,
-): void {
-  const sourceNode = nodeMap.get(sourceNodeId)
-  const targetNode = nodeMap.get(targetNodeId)
-
-  if (!sourceNode || !targetNode) {
-    return
-  }
-
-  const linkId = `link-${nanoid(8)}`
-  const sourceUpdate = attachInterfaceForLink(sourceNode, linkId)
-  const targetUpdate = attachInterfaceForLink(targetNode, linkId)
-
-  nodeMap.set(sourceNodeId, sourceUpdate.node)
-  nodeMap.set(targetNodeId, targetUpdate.node)
-  links.push({
-    id: linkId,
-    endpointA: {
-      nodeId: sourceNodeId,
-      interfaceId: sourceUpdate.interfaceId,
-    },
-    endpointB: {
-      nodeId: targetNodeId,
-      interfaceId: targetUpdate.interfaceId,
-    },
-    status: 'up',
-    delayMs: 100,
-    lossRate: 0,
-    mtu: DEFAULT_LINK_MTU,
-  })
 }
 
 function hostIpAddress(
