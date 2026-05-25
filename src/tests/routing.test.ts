@@ -135,6 +135,52 @@ describe('Longest Prefix Match', () => {
     ).toBe('path-a')
   })
 
+  test('excludes the ingress interface from equal best route selection', () => {
+    const routes = [
+      route('backtrack', '10.0.2.0', 24, 'manual-static'),
+      route('alternate', '10.0.2.0', 24, 'manual-static'),
+    ]
+    routes[0].outInterfaceId = 'router-r1-g0-0'
+    routes[1].outInterfaceId = 'router-r1-g0-1'
+
+    expect(
+      lookupRoute('10.0.2.10', routes, {
+        excludedOutInterfaceId: 'router-r1-g0-0',
+        random: () => 0,
+      }).selectedRoute?.id,
+    ).toBe('alternate')
+  })
+
+  test('does not select a route when every equal best route uses the ingress interface', () => {
+    const routes = [route('backtrack', '10.0.2.0', 24, 'manual-static')]
+
+    routes[0].outInterfaceId = 'router-r1-g0-0'
+
+    const result = lookupRoute('10.0.2.10', routes, {
+      excludedOutInterfaceId: 'router-r1-g0-0',
+      random: () => 0,
+    })
+
+    expect(result.reason).toBe('no-match')
+    expect(result.selectedRoute).toBeUndefined()
+  })
+
+  test('uses the next eligible route when the highest-priority route uses the ingress interface', () => {
+    const routes = [
+      route('manual-backtrack', '10.0.2.0', 24, 'manual-static'),
+      route('auto-alternate', '10.0.2.0', 24, 'auto-static'),
+    ]
+    routes[0].outInterfaceId = 'router-r1-g0-0'
+    routes[1].outInterfaceId = 'router-r1-g0-1'
+
+    expect(
+      lookupRoute('10.0.2.10', routes, {
+        excludedOutInterfaceId: 'router-r1-g0-0',
+        random: () => 0,
+      }).selectedRoute?.id,
+    ).toBe('auto-alternate')
+  })
+
   test('returns no-match when no enabled route matches', () => {
     const result = lookupRoute('203.0.113.10', [
       route('lan', '10.0.2.0', 24, 'connected'),

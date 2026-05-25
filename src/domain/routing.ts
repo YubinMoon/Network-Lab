@@ -144,7 +144,7 @@ export function generateAutoStaticRoutes(
 export function lookupRoute(
   dstIp: string,
   routes: RouteEntry[],
-  options: { random?: () => number } = {},
+  options: { random?: () => number; excludedOutInterfaceId?: InterfaceId } = {},
 ): RouteLookupResult {
   const candidates = routes
     .filter((route) => route.enabled)
@@ -169,14 +169,23 @@ export function lookupRoute(
     .filter((candidate) => candidate.matched)
     .map((candidate, index) => ({ ...candidate, index }))
     .sort((a, b) => compareRouteEntries(a.route, b.route) || a.index - b.index)
+  const selectableMatchedCandidates = options.excludedOutInterfaceId
+    ? matchedCandidates.filter(
+        (candidate) =>
+          candidate.route.outInterfaceId !== options.excludedOutInterfaceId,
+      )
+    : matchedCandidates
 
-  if (matchedCandidates.length === 0) {
+  if (selectableMatchedCandidates.length === 0) {
     return { candidates, reason: 'no-match' }
   }
 
-  const bestCandidates = matchedCandidates.filter(
+  const bestCandidates = selectableMatchedCandidates.filter(
     (candidate) =>
-      compareRouteEntries(candidate.route, matchedCandidates[0].route) === 0,
+      compareRouteEntries(
+        candidate.route,
+        selectableMatchedCandidates[0].route,
+      ) === 0,
   )
   const selectedIndex = randomCandidateIndex(
     bestCandidates.length,
@@ -184,7 +193,7 @@ export function lookupRoute(
   )
 
   return {
-    selectedRoute: bestCandidates[selectedIndex]?.route ?? matchedCandidates[0].route,
+    selectedRoute: bestCandidates[selectedIndex]?.route ?? bestCandidates[0].route,
     candidates,
     reason: 'longest-prefix-match',
   }

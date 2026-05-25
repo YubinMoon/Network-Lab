@@ -354,14 +354,10 @@ describe('IPv4 forwarding simulation', () => {
     }
   })
 
-  test('uses a fresh random route choice when a packet revisits a router', () => {
-    const randomSpy = vi
-      .spyOn(Math, 'random')
-      .mockReturnValueOnce(0)
-      .mockReturnValueOnce(0.75)
-      .mockReturnValue(0)
+  test('drops instead of forwarding back out the ingress interface', () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0)
     const topology = topologyWithManualRoutes(
-      applyAutoConfiguration(revisitingRouterTopology()),
+      applyAutoConfiguration(backtrackingRouterTopology()),
     )
     const destinationIp = interfaceByName(topology, 'host-c', 'eth0').ipAddress
 
@@ -381,11 +377,20 @@ describe('IPv4 forwarding simulation', () => {
           outInterfaceId: event.details?.outInterfaceId,
         }))
 
-      expect(nextHopEvents.slice(0, 3)).toEqual([
+      expect(trace.result).toEqual({
+        status: 'dropped',
+        reason: 'No Matching Route',
+      })
+      expect(nextHopEvents).toEqual([
         { routerId: 'router-r1', outInterfaceId: 'router-r1-g0-0' },
-        { routerId: 'router-r2', outInterfaceId: 'router-r2-g0-0' },
-        { routerId: 'router-r1', outInterfaceId: 'router-r1-g0-1' },
       ])
+      expect(
+        trace.events.some(
+          (event) =>
+            event.type === 'packet-dropped' &&
+            event.actorNodeId === 'router-r2',
+        ),
+      ).toBe(true)
     } finally {
       randomSpy.mockRestore()
     }
@@ -498,7 +503,7 @@ function routerMeshWithSourceTopology(): TopologyState {
   )
 }
 
-function revisitingRouterTopology(): TopologyState {
+function backtrackingRouterTopology(): TopologyState {
   const hostA = host('host-a', 'Host A')
   const routerR1 = router('router-r1', 'Router R1', [
     'g0/0',

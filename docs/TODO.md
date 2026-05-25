@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-25: Completed ingress-interface exclusion for router route selection so random routing never forwards a packet back out the interface it arrived on, with regression tests and browser module verification.
 - 2026-05-25: Completed random equal-metric router route selection by removing Packet Count and router-arrival round-robin counters, with regression tests and browser verification.
 - 2026-05-25: Completed Packet Count batch dynamic-table carryover so later Generic IPv4 packets reuse ARP Cache and MAC Address Table entries from earlier packets, with regression tests and browser verification.
 - 2026-05-25: Completed per-router-arrival round-robin route selection so repeated visits to the same router advance to the next equal-metric route, with regression tests.

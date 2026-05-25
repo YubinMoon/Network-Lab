@@ -122,6 +122,7 @@ export function forwardIpv4FrameAtRouter({
 
   const routeLookup = lookupRoute(datagram.dstIp, router.routingTable, {
     random: routeRandom,
+    excludedOutInterfaceId: ingressInterfaceId,
   })
   const selectedRoute = routeLookup.selectedRoute
 
