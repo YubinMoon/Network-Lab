@@ -9,6 +9,7 @@ import {
   createIcmpEchoRequest,
   isIcmpEchoRequest,
 } from './icmp'
+import { applySimulationTraceToTopology } from './dynamicTables'
 import {
   createIpv4Datagram,
   createIpv4Frame,
@@ -114,17 +115,22 @@ export function simulateIpv4PacketBatch(
     )
   }
 
-  const packetTraces = Array.from({ length: packetCount }, (_, index) => {
-    const packetId = `packet-${index + 1}`
+  const packetTraces: PacketTrace[] = []
+  let currentTopology = topology
 
-    return simulateIpv4PacketInternal(topology, input, {
+  for (let index = 0; index < packetCount; index += 1) {
+    const packetId = `packet-${index + 1}`
+    const packetTrace = simulateIpv4PacketInternal(currentTopology, input, {
       packetId,
       allowIcmpReply: true,
       icmpReply: false,
       replyPacketId: `${packetId}-reply`,
       routeSelectionIndex: index,
     })
-  })
+
+    packetTraces.push(packetTrace)
+    currentTopology = applySimulationTraceToTopology(currentTopology, packetTrace)
+  }
 
   return mergePacketTraces(input, packetTraces)
 }

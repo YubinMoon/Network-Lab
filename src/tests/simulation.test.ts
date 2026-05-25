@@ -307,6 +307,24 @@ describe('IPv4 forwarding simulation', () => {
     expect(packetIds.has('packet-3')).toBe(true)
   })
 
+  test('reuses ARP Cache entries between generic packets in a batch', () => {
+    const topology = applyAutoConfiguration(firstMilestoneTopology())
+    const trace = simulateIpv4PacketBatch(topology, {
+      sourceHostId: 'host-a',
+      destinationIp: '10.0.2.10',
+      ttl: 64,
+      packetType: 'generic-ipv4',
+      packetCount: 3,
+    })
+
+    expect(arpEvents(trace.events, 'host-a', 'arp-cache-miss')).toHaveLength(1)
+    expect(arpEvents(trace.events, 'host-a', 'arp-cache-hit')).toHaveLength(2)
+    expect(arpEvents(trace.events, 'router-r1', 'arp-cache-miss')).toHaveLength(
+      1,
+    )
+    expect(arpEvents(trace.events, 'router-r1', 'arp-cache-hit')).toHaveLength(2)
+  })
+
   test('round-robins equal-metric auto routes at each router per packet', () => {
     const topology = applyAutoConfiguration(routerMeshWithSourceTopology())
     const destinationIp = interfaceByName(topology, 'host-c', 'eth0').ipAddress
@@ -699,6 +717,16 @@ function eventByType(
   }
 
   return event
+}
+
+function arpEvents(
+  events: SimulationEvent[],
+  actorNodeId: string,
+  type: 'arp-cache-hit' | 'arp-cache-miss',
+): SimulationEvent[] {
+  return events.filter(
+    (event) => event.type === type && event.actorNodeId === actorNodeId,
+  )
 }
 
 function hostById(topology: TopologyState, id: string): HostNode {
