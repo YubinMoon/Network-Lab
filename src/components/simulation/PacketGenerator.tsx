@@ -130,7 +130,7 @@ export function PacketGenerator() {
         <span>Payload</span>
         <input value={payload} onChange={(event) => setPayload(event.target.value)} />
       </label>
-      <button type="submit" disabled={!canSend}>
+      <button type="submit" className="packet-send-button" disabled={!canSend}>
         Send
       </button>
     </form>

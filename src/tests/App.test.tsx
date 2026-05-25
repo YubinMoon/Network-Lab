@@ -36,6 +36,9 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Clear' })).toHaveClass(
       'clear-topology-button',
     )
+    expect(screen.getByRole('button', { name: 'Send' })).toHaveClass(
+      'packet-send-button',
+    )
   })
 
   test('adds nodes to the topology store from the Palette', () => {

@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-25: Completed green primary-action styling for the Packet Generator `Send` button, with regression tests and browser verification.
 - 2026-05-25: Completed red destructive-action styling for the Palette `Clear` button, with regression tests and browser verification.
 - 2026-05-25: Completed removal of the redundant `Load First Milestone` button and store action, replacing test coverage with the `Default Gateway Forwarding` example path.
 - 2026-05-25: Completed sequential Router node IDs from the Router button so generated interface IDs and Routing Table `Out Interface` values use `router-rN-g0-M`, with regression tests and browser verification.

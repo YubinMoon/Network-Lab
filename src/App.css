@@ -173,6 +173,18 @@ h3 {
   font-weight: 700;
 }
 
+.packet-send-button {
+  border-color: transparent;
+  background: var(--success);
+  color: #07130e;
+  font-weight: 750;
+}
+
+.packet-send-button:hover {
+  border-color: var(--success);
+  background: #7be0af;
+}
+
 .persistence-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
