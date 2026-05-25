@@ -33,6 +33,9 @@ describe('App', () => {
     ).not.toBeInTheDocument()
     expect(screen.getByLabelText('Network Canvas')).toBeInTheDocument()
     expect(screen.getByLabelText('Simulation Panel')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Clear' })).toHaveClass(
+      'clear-topology-button',
+    )
   })
 
   test('adds nodes to the topology store from the Palette', () => {

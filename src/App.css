@@ -145,6 +145,18 @@ h3 {
   gap: 12px;
 }
 
+.clear-topology-button {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #210b0d;
+  font-weight: 750;
+}
+
+.clear-topology-button:hover {
+  border-color: var(--danger);
+  background: #ff9494;
+}
+
 .packet-tool label {
   display: grid;
   gap: 4px;

@@ -47,7 +47,11 @@ function App() {
             ))}
           </div>
           <div className="topology-actions">
-            <button type="button" onClick={clearTopology}>
+            <button
+              type="button"
+              className="clear-topology-button"
+              onClick={clearTopology}
+            >
               Clear
             </button>
           </div>
