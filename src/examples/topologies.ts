@@ -9,6 +9,7 @@ import {
   type NetworkLink,
   type NetworkNode,
   type PacketGeneratorInput,
+  type RouteEntry,
   type RouterNode,
   type SwitchNode,
   type TopologyState,
@@ -53,6 +54,12 @@ export const EXAMPLE_TOPOLOGIES: ExampleTopology[] = [
       packetCount: 2,
       payload: 'Fragmentation payload '.repeat(12),
     },
+  },
+  {
+    id: 'redundant-router-mesh',
+    name: 'Redundant Router Mesh',
+    topology: redundantRouterMeshTopology(),
+    packet: hostPacket('host-a', 'host-b', 'generic-ipv4'),
   },
   {
     id: 'no-matching-route',
@@ -179,6 +186,137 @@ function fragmentationRandomRoutingTopology(): TopologyState {
   )
 }
 
+function redundantRouterMeshTopology(): TopologyState {
+  const hostA = positioned(host('host-a', 'Host A'), 40, 280)
+  const routerR1 = positioned(
+    {
+      ...router('router-r1', 'Router R1', ['g0/0', 'g0/1', 'g0/2']),
+      routingTable: [
+        manualRoute(
+          'route-r1-manual-via-r2',
+          '10.0.2.0',
+          24,
+          '10.255.1.2',
+          'router-r1-g0-1',
+        ),
+        manualRoute(
+          'route-r1-manual-via-r3',
+          '10.0.2.0',
+          24,
+          '10.255.2.2',
+          'router-r1-g0-2',
+        ),
+      ],
+    } satisfies RouterNode,
+    250,
+    280,
+  )
+  const routerR2 = positioned(
+    {
+      ...router('router-r2', 'Router R2', ['g0/0', 'g0/1', 'g0/2', 'g0/3']),
+      routingTable: [
+        manualRoute(
+          'route-r2-manual-via-r4',
+          '10.0.2.0',
+          24,
+          '10.255.3.2',
+          'router-r2-g0-1',
+        ),
+        manualRoute(
+          'route-r2-manual-via-r5',
+          '10.0.2.0',
+          24,
+          '10.255.4.2',
+          'router-r2-g0-2',
+        ),
+      ],
+    } satisfies RouterNode,
+    500,
+    120,
+  )
+  const routerR3 = positioned(
+    {
+      ...router('router-r3', 'Router R3', ['g0/0', 'g0/1', 'g0/2', 'g0/3']),
+      routingTable: [
+        manualRoute(
+          'route-r3-manual-via-r4',
+          '10.0.2.0',
+          24,
+          '10.255.6.2',
+          'router-r3-g0-1',
+        ),
+        manualRoute(
+          'route-r3-manual-via-r5',
+          '10.0.2.0',
+          24,
+          '10.255.7.2',
+          'router-r3-g0-2',
+        ),
+      ],
+    } satisfies RouterNode,
+    500,
+    440,
+  )
+  const routerR4 = positioned(
+    {
+      ...router('router-r4', 'Router R4', ['g0/0', 'g0/1', 'g0/2', 'g0/3']),
+      routingTable: [
+        manualRoute(
+          'route-r4-manual-via-r6',
+          '10.0.2.0',
+          24,
+          '10.255.8.2',
+          'router-r4-g0-2',
+        ),
+      ],
+    } satisfies RouterNode,
+    760,
+    120,
+  )
+  const routerR5 = positioned(
+    {
+      ...router('router-r5', 'Router R5', ['g0/0', 'g0/1', 'g0/2', 'g0/3']),
+      routingTable: [
+        manualRoute(
+          'route-r5-manual-via-r6',
+          '10.0.2.0',
+          24,
+          '10.255.10.2',
+          'router-r5-g0-2',
+        ),
+      ],
+    } satisfies RouterNode,
+    760,
+    440,
+  )
+  const routerR6 = positioned(
+    router('router-r6', 'Router R6', ['g0/0', 'g0/1', 'g0/2']),
+    1010,
+    280,
+  )
+  const hostB = positioned(host('host-b', 'Host B'), 1220, 280)
+
+  return {
+    nodes: [hostA, routerR1, routerR2, routerR3, routerR4, routerR5, routerR6, hostB],
+    links: [
+      link('link-1', endpoint(hostA, 'eth0'), endpoint(routerR1, 'g0/0')),
+      link('link-2', endpoint(routerR1, 'g0/1'), endpoint(routerR2, 'g0/0')),
+      link('link-3', endpoint(routerR1, 'g0/2'), endpoint(routerR3, 'g0/0')),
+      link('link-4', endpoint(routerR2, 'g0/1'), endpoint(routerR4, 'g0/0')),
+      link('link-5', endpoint(routerR2, 'g0/2'), endpoint(routerR5, 'g0/0')),
+      link('link-6', endpoint(routerR3, 'g0/1'), endpoint(routerR4, 'g0/1')),
+      link('link-7', endpoint(routerR3, 'g0/2'), endpoint(routerR5, 'g0/1')),
+      link('link-8', endpoint(routerR4, 'g0/2'), endpoint(routerR6, 'g0/0')),
+      link('link-9', endpoint(routerR5, 'g0/2'), endpoint(routerR6, 'g0/1')),
+      link('link-10', endpoint(routerR2, 'g0/3'), endpoint(routerR3, 'g0/3')),
+      link('link-11', endpoint(routerR4, 'g0/3'), endpoint(routerR5, 'g0/3')),
+      link('link-12', endpoint(routerR6, 'g0/2'), endpoint(hostB, 'eth0')),
+    ],
+    segments: [],
+    settings: DEFAULT_LAB_SETTINGS,
+  }
+}
+
 function topologyState(
   nodes: NetworkNode[],
   links: NetworkLink[],
@@ -198,6 +336,36 @@ function exampleNodePosition(index: number): CanvasPosition {
   return {
     x: 80 + index * EXAMPLE_NODE_SPACING_X,
     y: EXAMPLE_NODE_Y,
+  }
+}
+
+function positioned<T extends NetworkNode>(
+  node: T,
+  x: number,
+  y: number,
+): T {
+  return {
+    ...node,
+    position: { x, y },
+  }
+}
+
+function manualRoute(
+  id: string,
+  destinationNetwork: string,
+  prefixLength: number,
+  nextHopIp: string,
+  outInterfaceId: InterfaceId,
+): RouteEntry {
+  return {
+    id,
+    destinationNetwork,
+    prefixLength,
+    nextHopIp,
+    outInterfaceId,
+    type: 'manual-static',
+    metric: 1,
+    enabled: true,
   }
 }
 

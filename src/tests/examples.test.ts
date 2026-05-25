@@ -10,6 +10,7 @@ const requiredExampleNames = [
   'Default Gateway Forwarding',
   'Router-to-Router Forwarding',
   'MTU Fragmentation and Random Routing',
+  'Redundant Router Mesh',
   'No Matching Route',
 ]
 
@@ -163,6 +164,67 @@ describe('Example topologies', () => {
             event.details.fragments.length > 1,
         ),
       ).toBe(true)
+    } finally {
+      randomSpy.mockRestore()
+    }
+  })
+
+  test('redundant router mesh example uses two Hosts and at least six Routers', () => {
+    const example = EXAMPLE_TOPOLOGIES.find(
+      (candidate) => candidate.id === 'redundant-router-mesh',
+    )
+
+    expect(example).toBeTruthy()
+
+    if (!example) {
+      return
+    }
+
+    expect(
+      example.topology.nodes.filter((node) => node.type === 'host'),
+    ).toHaveLength(2)
+    expect(
+      example.topology.nodes.filter((node) => node.type === 'router').length,
+    ).toBeGreaterThanOrEqual(6)
+  })
+
+  test('redundant router mesh example can deliver across the Router mesh', () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.99)
+    const example = EXAMPLE_TOPOLOGIES.find(
+      (candidate) => candidate.id === 'redundant-router-mesh',
+    )
+
+    try {
+      expect(example).toBeTruthy()
+
+      if (!example) {
+        return
+      }
+
+      const topology = applyAutoConfiguration(example.topology)
+      const destinationIp = topology.nodes
+        .find((node) => node.id === example.packet.targetHostId)
+        ?.interfaces[0]?.ipAddress
+
+      expect(destinationIp).toBe('10.0.2.10')
+
+      const trace = simulateIpv4PacketBatch(topology, {
+        sourceHostId: example.packet.sourceHostId,
+        destinationIp: destinationIp ?? '0.0.0.0',
+        ttl: example.packet.ttl,
+        packetType: example.packet.packetType,
+        payload: example.packet.payload,
+        packetCount: example.packet.packetCount,
+        intervalMs: example.packet.intervalMs,
+      })
+      const traversedRouters = new Set(
+        trace.events
+          .filter((event) => event.type === 'router-next-hop-selected')
+          .map((event) => event.actorNodeId),
+      )
+
+      expect(trace.result.status).toBe('delivered')
+      expect(traversedRouters.size).toBeGreaterThanOrEqual(3)
     } finally {
       randomSpy.mockRestore()
     }
