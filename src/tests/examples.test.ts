@@ -169,7 +169,7 @@ describe('Example topologies', () => {
     }
   })
 
-  test('redundant router mesh example uses two Hosts and at least six Routers', () => {
+  test('redundant router mesh example uses two Hosts and nine Routers', () => {
     const example = EXAMPLE_TOPOLOGIES.find(
       (candidate) => candidate.id === 'redundant-router-mesh',
     )
@@ -185,7 +185,20 @@ describe('Example topologies', () => {
     ).toHaveLength(2)
     expect(
       example.topology.nodes.filter((node) => node.type === 'router').length,
-    ).toBeGreaterThanOrEqual(6)
+    ).toBe(9)
+    expect(example.topology.nodes.map((node) => node.id)).toEqual(
+      expect.arrayContaining([
+        'router-r1',
+        'router-r2',
+        'router-r3',
+        'router-r4',
+        'router-r5',
+        'router-r6',
+        'router-r7',
+        'router-r8',
+        'router-r9',
+      ]),
+    )
   })
 
   test('redundant router mesh example can deliver across the Router mesh', () => {

@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-25: Completed `Redundant Router Mesh` revision to match the requested 9-router visual shape with Host A/B at both ends and Router R1-R9 across the mesh.
 - 2026-05-25: Completed `Redundant Router Mesh` example with two Hosts and six interconnected Routers, plus example coverage and browser verification.
 - 2026-05-25: Completed ingress-interface exclusion for router route selection so random routing never forwards a packet back out the interface it arrived on, with regression tests and browser module verification.
 - 2026-05-25: Completed random equal-metric router route selection by removing Packet Count and router-arrival round-robin counters, with regression tests and browser verification.
