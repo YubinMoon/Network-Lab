@@ -432,8 +432,13 @@ function forwardThroughRouters(
     datagram: initialDatagram,
   })
   const maxHops = Math.max(1, initialDatagram.ttl)
+  const routerArrivalCounts = new Map<string, number>()
 
   for (let hop = 0; hop < maxHops; hop += 1) {
+    const routerArrivalCount = routerArrivalCounts.get(currentRouter.id) ?? 0
+
+    routerArrivalCounts.set(currentRouter.id, routerArrivalCount + 1)
+
     const routerResult = forwardAtRouterWithEvents(
       topology,
       currentRouter,
@@ -441,7 +446,7 @@ function forwardThroughRouters(
       incomingFrame,
       `frame-${hop + 2}`,
       eventBuilder,
-      options.routeSelectionIndex,
+      (options.routeSelectionIndex ?? 0) + routerArrivalCount,
     )
 
     if (routerResult.status === 'dropped') {

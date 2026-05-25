@@ -342,6 +342,34 @@ describe('IPv4 forwarding simulation', () => {
       'router-r6-g0-2',
     ])
   })
+
+  test('advances equal-metric route selection when a packet revisits a router', () => {
+    const topology = topologyWithManualRoutes(
+      applyAutoConfiguration(revisitingRouterTopology()),
+    )
+    const destinationIp = interfaceByName(topology, 'host-c', 'eth0').ipAddress
+
+    expect(destinationIp).toBeTruthy()
+
+    const trace = simulateIpv4Packet(topology, {
+      sourceHostId: 'host-a',
+      destinationIp: destinationIp ?? '0.0.0.0',
+      ttl: 12,
+      packetType: 'generic-ipv4',
+    })
+    const nextHopEvents = trace.events
+      .filter((event) => event.type === 'router-next-hop-selected')
+      .map((event) => ({
+        routerId: event.actorNodeId,
+        outInterfaceId: event.details?.outInterfaceId,
+      }))
+
+    expect(nextHopEvents.slice(0, 3)).toEqual([
+      { routerId: 'router-r1', outInterfaceId: 'router-r1-g0-0' },
+      { routerId: 'router-r2', outInterfaceId: 'router-r2-g0-0' },
+      { routerId: 'router-r1', outInterfaceId: 'router-r1-g0-1' },
+    ])
+  })
 })
 
 function firstMilestoneTopology(): TopologyState {
@@ -448,6 +476,100 @@ function routerMeshWithSourceTopology(): TopologyState {
       link('link-9', endpoint(routerR8, 'g0/2'), endpoint(hostC, 'eth0')),
     ],
   )
+}
+
+function revisitingRouterTopology(): TopologyState {
+  const hostA = host('host-a', 'Host A')
+  const routerR1 = router('router-r1', 'Router R1', [
+    'g0/0',
+    'g0/1',
+    'g0/2',
+  ])
+  const routerR2 = router('router-r2', 'Router R2', ['g0/0'])
+  const routerR3 = router('router-r3', 'Router R3', ['g0/0', 'g0/1'])
+  const hostC = host('host-c', 'Host C')
+
+  return topologyState(
+    [hostA, routerR1, routerR2, routerR3, hostC],
+    [
+      link('link-1', endpoint(hostA, 'eth0'), endpoint(routerR1, 'g0/2')),
+      link('link-2', endpoint(routerR1, 'g0/0'), endpoint(routerR2, 'g0/0')),
+      link('link-3', endpoint(routerR1, 'g0/1'), endpoint(routerR3, 'g0/0')),
+      link('link-4', endpoint(routerR3, 'g0/1'), endpoint(hostC, 'eth0')),
+    ],
+  )
+}
+
+function topologyWithManualRoutes(topology: TopologyState): TopologyState {
+  const hostCSegment = segmentContaining(topology, 'host-c-eth0')
+  const r2PeerIp = interfaceByName(topology, 'router-r2', 'g0/0').ipAddress
+  const r3PeerIp = interfaceByName(topology, 'router-r3', 'g0/0').ipAddress
+  const r1PeerIp = interfaceByName(topology, 'router-r1', 'g0/0').ipAddress
+
+  if (!r1PeerIp || !r2PeerIp || !r3PeerIp) {
+    throw new Error('Missing manual route next-hop IP address')
+  }
+
+  return {
+    ...topology,
+    nodes: topology.nodes.map((node) => {
+      if (node.id === 'router-r1' && node.type === 'router') {
+        return {
+          ...node,
+          routingTable: [
+            ...node.routingTable,
+            manualRoute('r1-via-r2', hostCSegment, r2PeerIp, 'router-r1-g0-0'),
+            manualRoute('r1-via-r3', hostCSegment, r3PeerIp, 'router-r1-g0-1'),
+          ],
+        }
+      }
+
+      if (node.id === 'router-r2' && node.type === 'router') {
+        return {
+          ...node,
+          routingTable: [
+            ...node.routingTable,
+            manualRoute('r2-via-r1', hostCSegment, r1PeerIp, 'router-r2-g0-0'),
+          ],
+        }
+      }
+
+      return node
+    }),
+  }
+}
+
+function manualRoute(
+  id: string,
+  segment: TopologyState['segments'][number],
+  nextHopIp: string,
+  outInterfaceId: InterfaceId,
+) {
+  return {
+    id,
+    destinationNetwork: segment.networkAddress,
+    prefixLength: segment.prefixLength,
+    nextHopIp,
+    outInterfaceId,
+    type: 'manual-static' as const,
+    metric: 1,
+    enabled: true,
+  }
+}
+
+function segmentContaining(
+  topology: TopologyState,
+  interfaceIdToFind: InterfaceId,
+) {
+  const segment = topology.segments.find((candidate) =>
+    candidate.memberInterfaceIds.includes(interfaceIdToFind),
+  )
+
+  if (!segment) {
+    throw new Error(`Missing segment containing ${interfaceIdToFind}`)
+  }
+
+  return segment
 }
 
 function topologyState(
