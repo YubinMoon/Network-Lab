@@ -199,8 +199,11 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Router' }))
     fireEvent.click(screen.getByRole('button', { name: 'Router' }))
 
-    expect(nodeByName('Router R4')).toBeTruthy()
-    expect(nodeByName('Router R5')).toBeTruthy()
+    const routerR4 = nodeByName('Router R4')
+    const routerR5 = nodeByName('Router R5')
+
+    expect(routerR4.id).toBe('router-r4')
+    expect(routerR5.id).toBe('router-r5')
     expect(
       useLabStore
         .getState()
@@ -208,6 +211,23 @@ describe('App', () => {
     ).toHaveLength(1)
     expect(screen.getAllByText('Router R4').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Router R5').length).toBeGreaterThan(0)
+  })
+
+  test('uses sequential Router IDs in generated interface IDs', () => {
+    act(() => {
+      useLabStore.getState().loadFirstMilestoneTopology()
+      useLabStore.getState().addNode('router')
+      useLabStore.getState().addLink('router-r2', nodeByName('Switch S2').id)
+    })
+
+    const routerR2 = nodeByName('Router R2')
+
+    expect(routerR2.type).toBe('router')
+
+    if (routerR2.type === 'router') {
+      expect(routerR2.interfaces[0].id).toBe('router-r2-g0-0')
+      expect(routerR2.routingTable[0].outInterfaceId).toBe('router-r2-g0-0')
+    }
   })
 
   test('hides normal link status labels by default', () => {

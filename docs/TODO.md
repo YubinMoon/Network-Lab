@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-25: Completed sequential Router node IDs from the Router button so generated interface IDs and Routing Table `Out Interface` values use `router-rN-g0-M`, with regression tests and browser verification.
 - 2026-05-25: Completed Inspector width adjustment and sequential Router naming from the Router button, with regression tests and browser verification.
 - 2026-05-25: Completed Link MTU and IPv4 fragmentation support with full IPv4 header values, equal-route round-robin forwarding, a fragmentation example, regression tests, and browser verification.
 - 2026-05-25: Completed Example list consolidation so entries with the same physical node configuration are represented once, with regression tests and browser verification.

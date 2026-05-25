@@ -587,10 +587,12 @@ function createNode(type: NodeType, existingNodes: NetworkNode[]): NetworkNode {
     } satisfies SwitchNode
   }
 
+  const routerNumber = nextRouterNumber(existingNodes)
+
   return {
-    id,
+    id: `router-r${routerNumber}`,
     type,
-    name: `Router R${nextRouterNumber(existingNodes)}`,
+    name: `Router R${routerNumber}`,
     position,
     interfaces: [],
     routingTable: [],
