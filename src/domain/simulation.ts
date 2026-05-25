@@ -66,6 +66,19 @@ interface SimulationRunOptions {
   replyPacketId?: string
 }
 
+interface PendingForward {
+  router: RouterNode
+  outInterface: NetworkInterface
+  frame: EthernetFrame
+}
+
+interface RouterFrameState {
+  currentRouter: RouterNode
+  ingressInterface: NetworkInterface
+  incomingFrame: EthernetFrame
+  pendingForward: PendingForward
+}
+
 export function simulateIpv4Packet(
   topology: TopologyState,
   input: Ipv4SimulationInput,
@@ -445,6 +458,7 @@ function forwardThroughRouters(
       incomingFrame,
       `frame-${hop + 2}`,
       eventBuilder,
+      { deferForwardingEvents: true },
     )
 
     if (routerResult.status === 'dropped') {
@@ -454,7 +468,9 @@ function forwardThroughRouters(
       })
     }
 
-    if (!routerResult.frame) {
+    const routedFrames = routerResult.frames ?? (routerResult.frame ? [routerResult.frame] : [])
+
+    if (routedFrames.length === 0) {
       eventBuilder.addDrop(packetId, currentRouter.id, 'Network Unreachable')
       return trace(packetId, input, eventBuilder.events, {
         status: 'dropped',
@@ -469,7 +485,19 @@ function forwardThroughRouters(
       routerResult.outInterface?.segmentId ===
         destinationInterface.networkInterface.segmentId
     ) {
-      const deliveredFrames = routerResult.frames ?? [routerResult.frame]
+      const deliveredFrames = routedFrames
+
+      if (routerResult.outInterface) {
+        for (const deliveredFrame of deliveredFrames) {
+          addForwardedFrameEvents({
+            topology,
+            actorNode: currentRouter,
+            outInterface: routerResult.outInterface,
+            ethernetFrame: deliveredFrame,
+            eventBuilder,
+          })
+        }
+      }
 
       for (const deliveredFrame of deliveredFrames) {
         eventBuilder.add('packet-delivered', destinationInterface.node.id, {
@@ -516,9 +544,38 @@ function forwardThroughRouters(
       })
     }
 
+    if (routedFrames.length > 1 && routerResult.outInterface) {
+      return forwardFramesThroughRoutersInterleaved({
+        topology,
+        input,
+        packetId,
+        frames: routedFrames,
+        firstRouter: nextHopInterface.node,
+        firstRouterInterface: nextHopInterface.networkInterface,
+        eventBuilder,
+        options,
+        originalDatagram: routerResult.datagram ?? initialDatagram,
+        pendingForward: {
+          router: currentRouter,
+          outInterface: routerResult.outInterface,
+          frame: routedFrames[0],
+        },
+      })
+    }
+
+    if (routerResult.outInterface) {
+      addForwardedFrameEvents({
+        topology,
+        actorNode: currentRouter,
+        outInterface: routerResult.outInterface,
+        ethernetFrame: routedFrames[0],
+        eventBuilder,
+      })
+    }
+
     currentRouter = nextHopInterface.node
     ingressInterface = nextHopInterface.networkInterface
-    incomingFrame = routerResult.frame
+    incomingFrame = routedFrames[0]
   }
 
   eventBuilder.addDrop(packetId, currentRouter.id, 'TTL Expired')
@@ -535,6 +592,7 @@ function forwardAtRouterWithEvents(
   frame: EthernetFrame,
   nextFrameId: string,
   eventBuilder: ReturnType<typeof createEventBuilder>,
+  options: { deferForwardingEvents?: boolean } = {},
 ) {
   const datagram = frame.payload as IPv4Datagram
 
@@ -730,37 +788,270 @@ function forwardAtRouterWithEvents(
     frames: forwardedFrames,
   }
 
-  eventBuilder.add('router-frame-encapsulated', router.id, {
-    description: `${router.name} created new Ethernet Frame.`,
-    packetId: datagram.id,
-    frameId: forwardedResult.frame?.id,
-    details: { ethernetFrame: forwardedResult.frame },
-  })
-  for (const forwardedFrame of forwardedFrames) {
-    eventBuilder.add('packet-forwarded', router.id, {
-      description: `${router.name} forwarded frame out ${result.outInterface?.name}.`,
-      packetId: datagram.id,
-      frameId: forwardedFrame.id,
-      details: {
-        ethernetFrame: forwardedFrame,
-        outInterfaceId: result.outInterface?.id,
-      },
-    })
-  }
-  if (result.outInterface) {
+  if (!options.deferForwardingEvents && result.outInterface) {
     for (const forwardedFrame of forwardedFrames) {
-      addSwitchForwardingEvents({
+      addForwardedFrameEvents({
         topology,
-        segmentId: result.outInterface.segmentId,
-        sourceInterface: result.outInterface,
+        actorNode: router,
+        outInterface: result.outInterface,
         ethernetFrame: forwardedFrame,
-        packetId: datagram.id,
         eventBuilder,
       })
     }
   }
 
   return forwardedResult
+}
+
+function forwardFramesThroughRoutersInterleaved({
+  topology,
+  input,
+  packetId,
+  frames,
+  firstRouter,
+  firstRouterInterface,
+  eventBuilder,
+  options,
+  originalDatagram,
+  pendingForward,
+}: {
+  topology: TopologyState
+  input: Ipv4SimulationInput
+  packetId: string
+  frames: EthernetFrame[]
+  firstRouter: RouterNode
+  firstRouterInterface: NetworkInterface
+  eventBuilder: ReturnType<typeof createEventBuilder>
+  options: SimulationRunOptions
+  originalDatagram: IPv4Datagram
+  pendingForward: PendingForward
+}): PacketTrace {
+  const queue: RouterFrameState[] = frames.map((frame) => ({
+    currentRouter: firstRouter,
+    ingressInterface: firstRouterInterface,
+    incomingFrame: frame,
+    pendingForward: {
+      ...pendingForward,
+      frame,
+    },
+  }))
+  const deliveredDatagrams: IPv4Datagram[] = []
+  let deliveredNode: NetworkNode | undefined
+  let processedFrames = 0
+  const maxProcessedFrames = Math.max(1, input.ttl) * Math.max(1, frames.length) * 4
+
+  while (queue.length > 0) {
+    processedFrames += 1
+
+    if (processedFrames > maxProcessedFrames) {
+      const stalledState = queue[0]
+
+      eventBuilder.addDrop(
+        packetId,
+        stalledState?.currentRouter.id ?? input.sourceHostId,
+        'TTL Expired',
+      )
+      return trace(packetId, input, eventBuilder.events, {
+        status: 'dropped',
+        reason: 'TTL Expired',
+      })
+    }
+
+    const state = queue.shift()
+
+    if (!state) {
+      break
+    }
+
+    addForwardedFrameEvents({
+      topology,
+      actorNode: state.pendingForward.router,
+      outInterface: state.pendingForward.outInterface,
+      ethernetFrame: state.pendingForward.frame,
+      eventBuilder,
+    })
+
+    const routerResult = forwardAtRouterWithEvents(
+      topology,
+      state.currentRouter,
+      state.ingressInterface,
+      state.incomingFrame,
+      nextFrameId(eventBuilder),
+      eventBuilder,
+      { deferForwardingEvents: true },
+    )
+
+    if (routerResult.status === 'dropped') {
+      return trace(packetId, input, eventBuilder.events, {
+        status: 'dropped',
+        reason: routerResult.reason ?? 'Network Unreachable',
+      })
+    }
+
+    const routedFrames =
+      routerResult.frames ?? (routerResult.frame ? [routerResult.frame] : [])
+
+    if (routedFrames.length === 0 || !routerResult.outInterface) {
+      eventBuilder.addDrop(packetId, state.currentRouter.id, 'Network Unreachable')
+      return trace(packetId, input, eventBuilder.events, {
+        status: 'dropped',
+        reason: 'Network Unreachable',
+      })
+    }
+
+    const destinationInterface = interfaceByIp(topology, input.destinationIp)
+
+    if (
+      destinationInterface &&
+      routerResult.outInterface.segmentId ===
+        destinationInterface.networkInterface.segmentId
+    ) {
+      for (const deliveredFrame of routedFrames) {
+        addForwardedFrameEvents({
+          topology,
+          actorNode: state.currentRouter,
+          outInterface: routerResult.outInterface,
+          ethernetFrame: deliveredFrame,
+          eventBuilder,
+        })
+        eventBuilder.add('packet-delivered', destinationInterface.node.id, {
+          description: packetDeliveredDescription(
+            destinationInterface.node.name,
+            deliveredFrame,
+          ),
+          packetId,
+          frameId: deliveredFrame.id,
+          details: {
+            datagram: deliveredFrame.payload,
+            ethernetFrame: deliveredFrame,
+            sourceInterfaceId: routerResult.outInterface.id,
+            deliveredInterfaceId: destinationInterface.networkInterface.id,
+          },
+        })
+        deliveredDatagrams.push(deliveredFrame.payload as IPv4Datagram)
+        deliveredNode = destinationInterface.node
+      }
+
+      continue
+    }
+
+    const nextHopInterface = routerResult.nextHopIp
+      ? interfaceByIp(topology, routerResult.nextHopIp)
+      : undefined
+
+    if (!nextHopInterface || nextHopInterface.node.type !== 'router') {
+      eventBuilder.addDrop(packetId, state.currentRouter.id, 'Network Unreachable')
+      return trace(packetId, input, eventBuilder.events, {
+        status: 'dropped',
+        reason: 'Network Unreachable',
+      })
+    }
+
+    for (const routedFrame of routedFrames) {
+      queue.push({
+        currentRouter: nextHopInterface.node,
+        ingressInterface: nextHopInterface.networkInterface,
+        incomingFrame: routedFrame,
+        pendingForward: {
+          router: state.currentRouter,
+          outInterface: routerResult.outInterface,
+          frame: routedFrame,
+        },
+      })
+    }
+  }
+
+  if (deliveredDatagrams.length === 0 || !deliveredNode) {
+    eventBuilder.addDrop(packetId, input.sourceHostId, 'Network Unreachable')
+    return trace(packetId, input, eventBuilder.events, {
+      status: 'dropped',
+      reason: 'Network Unreachable',
+    })
+  }
+
+  addReassemblyEventIfNeeded({
+    datagram: originalDatagram,
+    datagrams: deliveredDatagrams,
+    actorNodeId: deliveredNode.id,
+    actorName: deliveredNode.name,
+    eventBuilder,
+  })
+
+  return maybeReplyToIcmpEcho(
+    topology,
+    input,
+    packetId,
+    originalDatagram,
+    deliveredNode,
+    eventBuilder.events,
+    options,
+  )
+}
+
+function addForwardedFrameEvents({
+  topology,
+  actorNode,
+  outInterface,
+  ethernetFrame,
+  eventBuilder,
+}: {
+  topology: TopologyState
+  actorNode: RouterNode
+  outInterface: NetworkInterface
+  ethernetFrame: EthernetFrame
+  eventBuilder: ReturnType<typeof createEventBuilder>
+}) {
+  const datagram = ethernetFrame.payload as IPv4Datagram
+  const packetId = datagram.originalDatagramId ?? datagram.id
+
+  eventBuilder.add('router-frame-encapsulated', actorNode.id, {
+    description: `${actorNode.name} created ${ipv4FrameUnitLabel(ethernetFrame)}.`,
+    packetId,
+    frameId: ethernetFrame.id,
+    details: { ethernetFrame },
+  })
+  eventBuilder.add('packet-forwarded', actorNode.id, {
+    description: `${actorNode.name} forwarded ${ipv4FrameUnitLabel(ethernetFrame)} out ${outInterface.name}.`,
+    packetId,
+    frameId: ethernetFrame.id,
+    details: {
+      ethernetFrame,
+      outInterfaceId: outInterface.id,
+    },
+  })
+  addSwitchForwardingEvents({
+    topology,
+    segmentId: outInterface.segmentId,
+    sourceInterface: outInterface,
+    ethernetFrame,
+    packetId,
+    eventBuilder,
+  })
+}
+
+function nextFrameId(eventBuilder: ReturnType<typeof createEventBuilder>): string {
+  return `frame-${eventBuilder.events.length + 1}`
+}
+
+function packetDeliveredDescription(
+  actorName: string,
+  ethernetFrame: EthernetFrame,
+): string {
+  return `${actorName} delivered ${ipv4FrameUnitLabel(ethernetFrame)}.`
+}
+
+function ipv4FrameUnitLabel(ethernetFrame: EthernetFrame): string {
+  const datagram = ethernetFrame.payload as IPv4Datagram
+
+  if (
+    datagram.originalDatagramId ||
+    datagram.moreFragments ||
+    datagram.fragmentOffset > 0
+  ) {
+    return `IPv4 Fragment offset ${datagram.fragmentOffset * 8}`
+  }
+
+  return 'IPv4 Datagram'
 }
 
 function fragmentDatagramForPath({

@@ -136,71 +136,188 @@ function twoRouterTopology(): TopologyState {
 }
 
 function fragmentationRandomRoutingTopology(): TopologyState {
-  const hostA = positioned(host('host-a', 'Host A'), 60, 260)
+  const destinationNetwork = '10.0.2.0'
+  const hostA = positioned(host('host-a', 'Host A'), 40, 360)
   const switchS1 = positioned(
     switchNode('switch-s1', 'Switch S1', ['e0/1', 'e0/2']),
-    260,
-    260,
+    240,
+    360,
   )
-  const routerR1 = {
-    ...positioned(
-      router('router-r1', 'Router R1', ['g0/0', 'g0/1', 'g0/2']),
-      470,
-      260,
-    ),
-    routingTable: [
-      {
-        id: 'route-r1-manual-via-r2',
-        destinationNetwork: '10.0.2.0',
-        prefixLength: 24,
-        nextHopIp: '10.255.1.2',
-        outInterfaceId: 'router-r1-g0-1',
-        type: 'manual-static',
-        metric: 1,
-        enabled: true,
-      },
-      {
-        id: 'route-r1-manual-via-r3',
-        destinationNetwork: '10.0.2.0',
-        prefixLength: 24,
-        nextHopIp: '10.255.2.2',
-        outInterfaceId: 'router-r1-g0-2',
-        type: 'manual-static',
-        metric: 1,
-        enabled: true,
-      },
-    ],
-  } satisfies RouterNode
+  const routerR1 = positioned(
+    {
+      ...router('router-r1', 'Router R1', ['g0/0', 'g0/1']),
+      routingTable: [
+        manualRoute(
+          'route-r1-manual-via-r2',
+          destinationNetwork,
+          24,
+          '10.255.1.2',
+          'router-r1-g0-1',
+        ),
+      ],
+    } satisfies RouterNode,
+    440,
+    360,
+  )
   const routerR2 = positioned(
-    router('router-r2', 'Router R2', ['g0/0', 'g0/1']),
-    710,
-    130,
+    {
+      ...router('router-r2', 'Router R2', [
+        'g0/0',
+        'g0/1',
+        'g0/2',
+        'g0/3',
+      ]),
+      routingTable: [
+        manualRoute(
+          'route-r2-manual-via-r3',
+          destinationNetwork,
+          24,
+          '10.255.2.2',
+          'router-r2-g0-1',
+        ),
+        manualRoute(
+          'route-r2-manual-via-r4',
+          destinationNetwork,
+          24,
+          '10.255.3.2',
+          'router-r2-g0-2',
+        ),
+        manualRoute(
+          'route-r2-manual-via-r5',
+          destinationNetwork,
+          24,
+          '10.255.4.2',
+          'router-r2-g0-3',
+        ),
+      ],
+    } satisfies RouterNode,
+    660,
+    360,
   )
   const routerR3 = positioned(
-    router('router-r3', 'Router R3', ['g0/0', 'g0/1']),
-    710,
-    390,
+    {
+      ...router('router-r3', 'Router R3', ['g0/0', 'g0/1']),
+      routingTable: [
+        manualRoute(
+          'route-r3-manual-via-r6',
+          destinationNetwork,
+          24,
+          '10.255.5.2',
+          'router-r3-g0-1',
+        ),
+      ],
+    } satisfies RouterNode,
+    900,
+    170,
   )
-  const switchS2 = positioned(
-    switchNode('switch-s2', 'Switch S2', ['e0/1', 'e0/2', 'e0/3']),
-    960,
+  const routerR4 = positioned(
+    {
+      ...router('router-r4', 'Router R4', ['g0/0', 'g0/1']),
+      routingTable: [
+        manualRoute(
+          'route-r4-manual-via-r7',
+          destinationNetwork,
+          24,
+          '10.255.6.2',
+          'router-r4-g0-1',
+        ),
+      ],
+    } satisfies RouterNode,
+    900,
+    360,
+  )
+  const routerR5 = positioned(
+    {
+      ...router('router-r5', 'Router R5', ['g0/0', 'g0/1']),
+      routingTable: [
+        manualRoute(
+          'route-r5-manual-via-r8',
+          destinationNetwork,
+          24,
+          '10.255.7.2',
+          'router-r5-g0-1',
+        ),
+      ],
+    } satisfies RouterNode,
+    900,
+    550,
+  )
+  const routerR8 = positioned(
+    {
+      ...router('router-r8', 'Router R8', ['g0/0', 'g0/1']),
+      routingTable: [
+        manualRoute(
+          'route-r8-manual-via-r7',
+          destinationNetwork,
+          24,
+          '10.255.8.2',
+          'router-r8-g0-1',
+        ),
+      ],
+    } satisfies RouterNode,
+    1140,
+    550,
+  )
+  const routerR7 = positioned(
+    {
+      ...router('router-r7', 'Router R7', ['g0/0', 'g0/1', 'g0/2']),
+      routingTable: [
+        manualRoute(
+          'route-r7-manual-via-r6',
+          destinationNetwork,
+          24,
+          '10.255.9.2',
+          'router-r7-g0-2',
+        ),
+      ],
+    } satisfies RouterNode,
+    1140,
+    360,
+  )
+  const routerR6 = positioned(
+    router('router-r6', 'Router R6', ['g0/0', 'g0/1', 'g0/2']),
+    1380,
     260,
   )
-  const hostB = positioned(host('host-b', 'Host B'), 1180, 260)
+  const switchS2 = positioned(
+    switchNode('switch-s2', 'Switch S2', ['e0/1', 'e0/2']),
+    1600,
+    260,
+  )
+  const hostB = positioned(host('host-b', 'Host B'), 1810, 260)
 
   return {
-    nodes: [hostA, switchS1, routerR1, routerR2, routerR3, switchS2, hostB],
+    nodes: [
+      hostA,
+      switchS1,
+      routerR1,
+      routerR2,
+      routerR3,
+      routerR4,
+      routerR5,
+      routerR8,
+      routerR7,
+      routerR6,
+      switchS2,
+      hostB,
+    ],
     links: [
       link('link-1', endpoint(hostA, 'eth0'), endpoint(switchS1, 'e0/1')),
       link('link-2', endpoint(switchS1, 'e0/2'), endpoint(routerR1, 'g0/0')),
-      link('link-3', endpoint(routerR1, 'g0/1'), endpoint(routerR2, 'g0/0')),
-      link('link-4', endpoint(routerR1, 'g0/2'), endpoint(routerR3, 'g0/0')),
-      link('link-5', endpoint(routerR2, 'g0/1'), endpoint(switchS2, 'e0/1'), 80),
-      link('link-6', endpoint(routerR3, 'g0/1'), endpoint(switchS2, 'e0/2'), 120),
-      link('link-7', endpoint(switchS2, 'e0/3'), endpoint(hostB, 'eth0'), 140),
+      link('link-3', endpoint(routerR1, 'g0/1'), endpoint(routerR2, 'g0/0'), 96),
+      link('link-4', endpoint(routerR2, 'g0/1'), endpoint(routerR3, 'g0/0')),
+      link('link-5', endpoint(routerR2, 'g0/2'), endpoint(routerR4, 'g0/0')),
+      link('link-6', endpoint(routerR2, 'g0/3'), endpoint(routerR5, 'g0/0')),
+      link('link-7', endpoint(routerR3, 'g0/1'), endpoint(routerR6, 'g0/0')),
+      link('link-8', endpoint(routerR4, 'g0/1'), endpoint(routerR7, 'g0/0')),
+      link('link-9', endpoint(routerR5, 'g0/1'), endpoint(routerR8, 'g0/0')),
+      link('link-10', endpoint(routerR8, 'g0/1'), endpoint(routerR7, 'g0/1')),
+      link('link-11', endpoint(routerR7, 'g0/2'), endpoint(routerR6, 'g0/1')),
+      link('link-12', endpoint(routerR6, 'g0/2'), endpoint(switchS2, 'e0/1')),
+      link('link-13', endpoint(switchS2, 'e0/2'), endpoint(hostB, 'eth0')),
     ],
     segments: [],
-    settings: DEFAULT_LAB_SETTINGS,
+    settings: { ...DEFAULT_LAB_SETTINGS, autoStaticRoutes: false },
   }
 }
 

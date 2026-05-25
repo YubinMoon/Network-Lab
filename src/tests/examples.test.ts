@@ -1,7 +1,13 @@
 import { describe, expect, test, vi } from 'vitest'
 import { applyAutoConfiguration } from '../domain/autoConfig'
 import { simulateIpv4PacketBatch } from '../domain/simulation'
-import type { LinkEndpoint, TopologyState } from '../domain/types'
+import type {
+  EthernetFrame,
+  IPv4Datagram,
+  LinkEndpoint,
+  SimulationEvent,
+  TopologyState,
+} from '../domain/types'
 import { validateTopology } from '../domain/validation'
 import { EXAMPLE_TOPOLOGIES } from '../examples/topologies'
 
@@ -107,11 +113,12 @@ describe('Example topologies', () => {
     }
   })
 
-  test('fragmentation example can randomly use equal routes and emit fragment events', () => {
+  test('fragmentation example fans R1 fragments across R2 random routes', () => {
     const randomSpy = vi
       .spyOn(Math, 'random')
-      .mockReturnValueOnce(0)
       .mockReturnValueOnce(0.99)
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0.5)
       .mockReturnValue(0)
     const example = EXAMPLE_TOPOLOGIES.find(
       (candidate) => candidate.id === 'fragmentation-random-routing',
@@ -137,32 +144,56 @@ describe('Example topologies', () => {
         ttl: example.packet.ttl,
         packetType: example.packet.packetType,
         payload: example.packet.payload,
-        packetCount: example.packet.packetCount,
+        packetCount: 1,
         intervalMs: example.packet.intervalMs,
       })
-      const r1RouteIds = trace.events
+      const r2RouteIds = trace.events
         .filter(
           (event) =>
             event.type === 'router-route-selected' &&
-            event.actorNodeId === 'router-r1',
+            event.actorNodeId === 'router-r2',
         )
         .map((event) => (event.details?.selectedRoute as { id: string }).id)
       const fragmentEvents = trace.events.filter(
         (event) => event.type === 'ipv4-datagram-fragmented',
       )
+      const r1SecondFragmentForwardedIndex = trace.events.findIndex(
+        (event) =>
+          event.type === 'packet-forwarded' &&
+          event.actorNodeId === 'router-r1' &&
+          frameDatagram(event)?.fragmentOffset === 9,
+      )
+      const firstR2RouteSelectedIndex = trace.events.findIndex(
+        (event) =>
+          event.type === 'router-route-selected' &&
+          event.actorNodeId === 'router-r2',
+      )
+      const deliveredFragmentOffsets = trace.events
+        .filter(
+          (event) =>
+            event.type === 'packet-delivered' &&
+            event.actorNodeId === 'host-b',
+        )
+        .map((event) => datagramDetail(event)?.fragmentOffset)
 
       expect(trace.result.status).toBe('delivered')
-      expect(r1RouteIds).toEqual([
-        'route-r1-manual-via-r2',
-        'route-r1-manual-via-r3',
+      expect(fragmentEvents).toHaveLength(1)
+      expect(fragmentEvents[0].actorNodeId).toBe('router-r1')
+      expect(fragmentEvents[0].details?.mtu).toBe(96)
+      expect(r2RouteIds).toEqual([
+        'route-r2-manual-via-r5',
+        'route-r2-manual-via-r3',
+        'route-r2-manual-via-r4',
+        'route-r2-manual-via-r3',
       ])
-      expect(fragmentEvents.map((event) => event.details?.mtu)).toEqual([80, 120])
+      expect(firstR2RouteSelectedIndex).toBeGreaterThanOrEqual(0)
+      expect(r1SecondFragmentForwardedIndex).toBeGreaterThan(
+        firstR2RouteSelectedIndex,
+      )
+      expect(deliveredFragmentOffsets).toEqual([9, 27, 18, 0])
       expect(
-        fragmentEvents.every(
-          (event) =>
-            Array.isArray(event.details?.fragments) &&
-            event.details.fragments.length > 1,
-        ),
+        Array.isArray(fragmentEvents[0].details?.fragments) &&
+          fragmentEvents[0].details.fragments.length > 1,
       ).toBe(true)
     } finally {
       randomSpy.mockRestore()
@@ -185,7 +216,7 @@ describe('Example topologies', () => {
         .filter((networkLink) => networkLink.mtu < 1500)
         .map((networkLink) => networkLink.mtu)
         .sort((a, b) => a - b),
-    ).toEqual([80, 120, 140])
+    ).toEqual([96])
   })
 
   test('redundant router mesh example uses two Hosts and nine Routers', () => {
@@ -285,4 +316,14 @@ function physicalTopologySignature(topology: TopologyState): string {
 
 function endpointSignature(endpoint: LinkEndpoint): string {
   return `${endpoint.nodeId}:${endpoint.interfaceId}`
+}
+
+function frameDatagram(event: SimulationEvent): IPv4Datagram | undefined {
+  const frame = event.details?.ethernetFrame as EthernetFrame | undefined
+
+  return frame?.payload as IPv4Datagram | undefined
+}
+
+function datagramDetail(event: SimulationEvent): IPv4Datagram | undefined {
+  return event.details?.datagram as IPv4Datagram | undefined
 }

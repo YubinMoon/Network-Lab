@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-25: Completed `MTU Fragmentation and Random Routing` redesign so R1 fragments before R2 randomly fans fragments across multiple router paths, and fragmented router forwarding advances hop-by-hop with out-of-order Host B arrival, with regression tests and browser verification.
 - 2026-05-25: Completed `MTU Fragmentation and Random Routing` example revision so loaded examples sync Packet Generator defaults and expose visible low-MTU fragmentation links, with regression tests and browser verification.
 - 2026-05-25: Completed `Redundant Router Mesh` revision to match the requested 9-router visual shape with Host A/B at both ends and Router R1-R9 across the mesh.
 - 2026-05-25: Completed `Redundant Router Mesh` example with two Hosts and six interconnected Routers, plus example coverage and browser verification.
