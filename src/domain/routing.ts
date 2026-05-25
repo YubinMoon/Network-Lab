@@ -114,34 +114,28 @@ export function generateAutoStaticRoutes(
       }
 
       const targetRouters = routersConnectedToSegment(segment.id, routerInterfaces)
-      const path = shortestPathToAny(router.id, targetRouters, routerGraph)
-
-      if (!path || path.length < 2) {
-        continue
-      }
-
-      const firstHopRouterId = path[1]
-      const edge = routerGraph.get(router.id)?.find(
-        (candidate) => candidate.toRouterId === firstHopRouterId,
+      const firstHopEdges = reachableFirstHopEdges(
+        router.id,
+        targetRouters,
+        routerGraph,
       )
 
-      if (!edge) {
-        continue
+      for (const edge of firstHopEdges) {
+        routes.push({
+          id: `route-${router.id}-auto-${segment.id}-${edge.localInterfaceId}`,
+          destinationNetwork: segment.networkAddress,
+          prefixLength: segment.prefixLength,
+          nextHopIp: edge.peerInterfaceIp,
+          outInterfaceId: edge.localInterfaceId,
+          type: 'auto-static',
+          metric: 1,
+          enabled: true,
+          generatedBy: 'auto-route-assistant',
+        })
       }
-
-      routes.push({
-        id: `route-${router.id}-auto-${segment.id}`,
-        destinationNetwork: segment.networkAddress,
-        prefixLength: segment.prefixLength,
-        nextHopIp: edge.peerInterfaceIp,
-        outInterfaceId: edge.localInterfaceId,
-        type: 'auto-static',
-        enabled: true,
-        generatedBy: 'auto-route-assistant',
-      })
     }
 
-    routesByRouter.set(router.id, routes)
+    routesByRouter.set(router.id, sortRoutes(routes))
   }
 
   return routesByRouter
@@ -283,34 +277,55 @@ function routersConnectedToSegment(
   )
 }
 
-function shortestPathToAny(
+function reachableFirstHopEdges(
   startRouterId: string,
   targetRouterIds: Set<string>,
   graph: Map<string, RouterGraphEdge[]>,
-): string[] | undefined {
-  const queue: string[][] = [[startRouterId]]
-  const visited = new Set([startRouterId])
+): RouterGraphEdge[] {
+  return (graph.get(startRouterId) ?? []).filter((edge) =>
+    canReachAnyRouter(edge.toRouterId, targetRouterIds, graph, startRouterId),
+  )
+}
+
+function canReachAnyRouter(
+  startRouterId: string,
+  targetRouterIds: Set<string>,
+  graph: Map<string, RouterGraphEdge[]>,
+  blockedRouterId: string,
+): boolean {
+  const queue = [startRouterId]
+  const visited = new Set([blockedRouterId])
 
   while (queue.length > 0) {
-    const path = queue.shift()
+    const current = queue.shift()
 
-    if (!path) {
+    if (!current) {
       continue
     }
 
-    const current = path[path.length - 1]
-
     if (targetRouterIds.has(current)) {
-      return path
+      return true
     }
+
+    visited.add(current)
 
     for (const edge of graph.get(current) ?? []) {
       if (!visited.has(edge.toRouterId)) {
-        visited.add(edge.toRouterId)
-        queue.push([...path, edge.toRouterId])
+        queue.push(edge.toRouterId)
       }
     }
   }
 
-  return undefined
+  return false
+}
+
+function sortRoutes(routes: RouteEntry[]): RouteEntry[] {
+  return [...routes].sort(
+    (a, b) =>
+      a.destinationNetwork.localeCompare(b.destinationNetwork) ||
+      b.prefixLength - a.prefixLength ||
+      (a.metric ?? Number.MAX_SAFE_INTEGER) -
+        (b.metric ?? Number.MAX_SAFE_INTEGER) ||
+      a.outInterfaceId.localeCompare(b.outInterfaceId),
+  )
 }

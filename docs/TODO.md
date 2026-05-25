@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-25: Completed dense router mesh fixes so preserved P2P segment addresses are not reused, auto static routes generate equal-metric alternatives through every reachable router interface, Routing Table shows Metric, and TTL-bound loops are testable, with regression tests and browser verification.
 - 2026-05-25: Completed green primary-action styling for the Packet Generator `Send` button, with regression tests and browser verification.
 - 2026-05-25: Completed red destructive-action styling for the Palette `Clear` button, with regression tests and browser verification.
 - 2026-05-25: Completed removal of the redundant `Load First Milestone` button and store action, replacing test coverage with the `Default Gateway Forwarding` example path.

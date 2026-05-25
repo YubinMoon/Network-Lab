@@ -245,6 +245,7 @@ function NodeInspector({
                   <th>Destination</th>
                   <th>Next Hop</th>
                   <th>Out Interface</th>
+                  <th>Metric</th>
                   <th>Type</th>
                 </tr>
               </thead>
@@ -261,6 +262,7 @@ function NodeInspector({
                     </td>
                     <td>{route.nextHopIp ?? 'connected'}</td>
                     <td>{route.outInterfaceId}</td>
+                    <td>{route.metric ?? '-'}</td>
                     <td>{routeTypeLabel(route.type)}</td>
                   </tr>
                 ))}

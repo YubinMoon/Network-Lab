@@ -306,6 +306,42 @@ describe('IPv4 forwarding simulation', () => {
     expect(packetIds.has('packet-2')).toBe(true)
     expect(packetIds.has('packet-3')).toBe(true)
   })
+
+  test('round-robins equal-metric auto routes at each router per packet', () => {
+    const topology = applyAutoConfiguration(routerMeshWithSourceTopology())
+    const destinationIp = interfaceByName(topology, 'host-c', 'eth0').ipAddress
+
+    expect(destinationIp).toBeTruthy()
+
+    const trace = simulateIpv4PacketBatch(topology, {
+      sourceHostId: 'host-a',
+      destinationIp: destinationIp ?? '0.0.0.0',
+      ttl: 12,
+      packetType: 'generic-ipv4',
+      packetCount: 3,
+    })
+    const firstR6OutInterfaceByPacket = new Map<string, unknown>()
+
+    for (const event of trace.events) {
+      if (
+        event.type === 'router-next-hop-selected' &&
+        event.actorNodeId === 'router-r6' &&
+        event.packetId &&
+        !firstR6OutInterfaceByPacket.has(event.packetId)
+      ) {
+        firstR6OutInterfaceByPacket.set(
+          event.packetId,
+          event.details?.outInterfaceId,
+        )
+      }
+    }
+
+    expect([...firstR6OutInterfaceByPacket.values()]).toEqual([
+      'router-r6-g0-0',
+      'router-r6-g0-1',
+      'router-r6-g0-2',
+    ])
+  })
 })
 
 function firstMilestoneTopology(): TopologyState {
@@ -364,6 +400,52 @@ function hostWithSeparateHostLinkTopology(): TopologyState {
       link('link-1', endpoint(hostA, 'eth0'), endpoint(switchS1, 'e0/1')),
       link('link-2', endpoint(switchS1, 'e0/2'), endpoint(hostB, 'eth0')),
       link('link-3', endpoint(hostB, 'eth1'), endpoint(hostC, 'eth0')),
+    ],
+  )
+}
+
+function routerMeshWithSourceTopology(): TopologyState {
+  const hostA = host('host-a', 'Host A')
+  const routerR6 = router('router-r6', 'Router R6', [
+    'g0/0',
+    'g0/1',
+    'g0/2',
+    'g0/3',
+  ])
+  const routerR5 = router('router-r5', 'Router R5', [
+    'g0/0',
+    'g0/1',
+    'g0/2',
+  ])
+  const routerR7 = router('router-r7', 'Router R7', [
+    'g0/0',
+    'g0/1',
+    'g0/2',
+  ])
+  const routerR4 = router('router-r4', 'Router R4', [
+    'g0/0',
+    'g0/1',
+    'g0/2',
+  ])
+  const routerR8 = router('router-r8', 'Router R8', [
+    'g0/0',
+    'g0/1',
+    'g0/2',
+  ])
+  const hostC = host('host-c', 'Host C')
+
+  return topologyState(
+    [hostA, routerR6, routerR5, routerR7, routerR4, routerR8, hostC],
+    [
+      link('link-1', endpoint(hostA, 'eth0'), endpoint(routerR6, 'g0/3')),
+      link('link-2', endpoint(routerR6, 'g0/0'), endpoint(routerR5, 'g0/0')),
+      link('link-3', endpoint(routerR6, 'g0/1'), endpoint(routerR7, 'g0/0')),
+      link('link-4', endpoint(routerR6, 'g0/2'), endpoint(routerR4, 'g0/0')),
+      link('link-5', endpoint(routerR4, 'g0/1'), endpoint(routerR5, 'g0/1')),
+      link('link-6', endpoint(routerR4, 'g0/2'), endpoint(routerR7, 'g0/1')),
+      link('link-7', endpoint(routerR5, 'g0/2'), endpoint(routerR8, 'g0/0')),
+      link('link-8', endpoint(routerR7, 'g0/2'), endpoint(routerR8, 'g0/1')),
+      link('link-9', endpoint(routerR8, 'g0/2'), endpoint(hostC, 'eth0')),
     ],
   )
 }

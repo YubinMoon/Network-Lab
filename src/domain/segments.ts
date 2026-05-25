@@ -142,16 +142,13 @@ function materializeSegments(
   previousSegments: NetworkSegment[],
 ): NetworkSegment[] {
   const usedPreviousIds = new Set<string>()
-  let lanIndex = 0
-  let pointToPointIndex = 0
+  const usedCidrs = new Set<string>()
+  const nextIndexes: Record<SegmentType, number> = {
+    lan: 1,
+    'point-to-point': 1,
+  }
 
   return drafts.map((draft) => {
-    if (draft.type === 'point-to-point') {
-      pointToPointIndex += 1
-    } else {
-      lanIndex += 1
-    }
-
     const matched = findPreviousSegment(
       draft,
       previousSegments,
@@ -161,36 +158,65 @@ function materializeSegments(
     if (matched) {
       usedPreviousIds.add(matched.id)
 
-      return {
-        ...matched,
-        type: draft.type,
-        memberInterfaceIds: draft.memberInterfaceIds,
+      if (!usedCidrs.has(cidrKey(matched))) {
+        usedCidrs.add(cidrKey(matched))
+
+        return {
+          ...matched,
+          type: draft.type,
+          memberInterfaceIds: draft.memberInterfaceIds,
+        }
       }
     }
 
-    const index = draft.type === 'point-to-point' ? pointToPointIndex : lanIndex
-    const networkAddress =
-      draft.type === 'point-to-point'
-        ? `10.255.${index}.0`
-        : `10.0.${index}.0`
-    const prefixLength = draft.type === 'point-to-point' ? 30 : 24
+    const allocation = nextSegmentAllocation(draft.type, nextIndexes, usedCidrs)
 
     return {
       id: segmentId(draft.memberInterfaceIds),
-      name: draft.type === 'point-to-point' ? `P2P-${index}` : `LAN-${index}`,
+      name:
+        draft.type === 'point-to-point'
+          ? `P2P-${allocation.index}`
+          : `LAN-${allocation.index}`,
       type: draft.type,
-      networkAddress,
-      prefixLength,
+      networkAddress: allocation.networkAddress,
+      prefixLength: allocation.prefixLength,
       memberInterfaceIds: draft.memberInterfaceIds,
       allocationPolicy: LAN_ALLOCATION_POLICY,
       reservedAddresses: [
-        networkAddress,
-        broadcastAddress(networkAddress, prefixLength),
+        allocation.networkAddress,
+        broadcastAddress(allocation.networkAddress, allocation.prefixLength),
       ],
       autoAssigned: true,
       manualOverride: false,
     }
   })
+}
+
+function nextSegmentAllocation(
+  type: SegmentType,
+  nextIndexes: Record<SegmentType, number>,
+  usedCidrs: Set<string>,
+): { index: number; networkAddress: string; prefixLength: number } {
+  const prefixLength = type === 'point-to-point' ? 30 : 24
+
+  while (true) {
+    const index = nextIndexes[type]
+    const networkAddress =
+      type === 'point-to-point' ? `10.255.${index}.0` : `10.0.${index}.0`
+    const key = `${networkAddress}/${prefixLength}`
+
+    nextIndexes[type] += 1
+
+    if (!usedCidrs.has(key)) {
+      usedCidrs.add(key)
+
+      return { index, networkAddress, prefixLength }
+    }
+  }
+}
+
+function cidrKey(segment: NetworkSegment): string {
+  return `${segment.networkAddress}/${segment.prefixLength}`
 }
 
 function findPreviousSegment(
@@ -203,7 +229,7 @@ function findPreviousSegment(
   const draftMembers = new Set(draft.memberInterfaceIds)
 
   for (const segment of previousSegments) {
-    if (usedPreviousIds.has(segment.id)) {
+    if (usedPreviousIds.has(segment.id) || segment.type !== draft.type) {
       continue
     }
 

@@ -431,7 +431,7 @@ function forwardThroughRouters(
     dstMac: ingressInterface.macAddress,
     datagram: initialDatagram,
   })
-  const maxHops = topology.nodes.length + 4
+  const maxHops = Math.max(1, initialDatagram.ttl)
 
   for (let hop = 0; hop < maxHops; hop += 1) {
     const routerResult = forwardAtRouterWithEvents(

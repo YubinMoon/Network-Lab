@@ -2,12 +2,14 @@ import { describe, expect, test } from 'vitest'
 import { applyAutoConfiguration } from '../domain/autoConfig'
 import {
   DEFAULT_LAB_SETTINGS,
+  LAN_ALLOCATION_POLICY,
   type HostNode,
   type InterfaceId,
   type LinkEndpoint,
   type NetworkInterface,
   type NetworkLink,
   type NetworkNode,
+  type NetworkSegment,
   type RouterNode,
   type SwitchNode,
   type TopologyState,
@@ -166,6 +168,36 @@ describe('Auto IP/MAC/Gateway assignment', () => {
       }),
     )
   })
+
+  test('does not reuse preserved point-to-point networks for new segments', () => {
+    const routerR1 = router('router-r1', 'Router R1', ['g0/0'])
+    const routerR2 = router('router-r2', 'Router R2', ['g0/0'])
+    const routerR3 = router('router-r3', 'Router R3', ['g0/0'])
+    const routerR4 = router('router-r4', 'Router R4', ['g0/0'])
+    const configured = applyAutoConfiguration({
+      ...topologyState(
+        [routerR1, routerR2, routerR3, routerR4],
+        [
+          link('link-1', endpoint(routerR1, 'g0/0'), endpoint(routerR2, 'g0/0')),
+          link('link-2', endpoint(routerR3, 'g0/0'), endpoint(routerR4, 'g0/0')),
+        ],
+      ),
+      segments: [p2pSegment('old-p2p-2', ['router-r1-g0-0', 'router-r2-g0-0'])],
+    })
+    const routerIps = configured.nodes
+      .filter((node) => node.type === 'router')
+      .flatMap((node) =>
+        node.interfaces
+          .map((networkInterface) => networkInterface.ipAddress)
+          .filter((ipAddress): ipAddress is string => Boolean(ipAddress)),
+      )
+    const p2pNetworks = configured.segments
+      .filter((segment) => segment.type === 'point-to-point')
+      .map((segment) => `${segment.networkAddress}/${segment.prefixLength}`)
+
+    expect(new Set(routerIps).size).toBe(routerIps.length)
+    expect(new Set(p2pNetworks).size).toBe(p2pNetworks.length)
+  })
 })
 
 function topologyState(
@@ -272,6 +304,24 @@ function link(
     delayMs: 100,
     lossRate: 0,
     mtu: 1500,
+  }
+}
+
+function p2pSegment(
+  id: string,
+  memberInterfaceIds: InterfaceId[],
+): NetworkSegment {
+  return {
+    id,
+    name: 'P2P-2',
+    type: 'point-to-point',
+    networkAddress: '10.255.2.0',
+    prefixLength: 30,
+    memberInterfaceIds,
+    allocationPolicy: LAN_ALLOCATION_POLICY,
+    reservedAddresses: ['10.255.2.0', '10.255.2.3'],
+    autoAssigned: true,
+    manualOverride: false,
   }
 }
 

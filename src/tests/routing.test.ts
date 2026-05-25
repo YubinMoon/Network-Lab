@@ -66,6 +66,25 @@ describe('Routing table generation', () => {
       ]),
     )
   })
+
+  test('generates equal-metric auto routes through every reachable router interface', () => {
+    const configured = applyAutoConfiguration(routerMeshTopology())
+    const routerR6 = routerById(configured, 'router-r6')
+    const hostCSegment = segmentContaining(configured, 'host-c-eth0')
+    const r6RoutesToHostC = routerR6.routingTable.filter(
+      (route) =>
+        route.type === 'auto-static' &&
+        route.destinationNetwork === hostCSegment.networkAddress &&
+        route.prefixLength === hostCSegment.prefixLength,
+    )
+
+    expect(r6RoutesToHostC.map((route) => route.outInterfaceId)).toEqual([
+      'router-r6-g0-0',
+      'router-r6-g0-1',
+      'router-r6-g0-2',
+    ])
+    expect(r6RoutesToHostC.map((route) => route.metric)).toEqual([1, 1, 1])
+  })
 })
 
 describe('Longest Prefix Match', () => {
@@ -159,6 +178,49 @@ function twoRouterTopology(): TopologyState {
       link('link-3', endpoint(routerR1, 'g0/1'), endpoint(routerR2, 'g0/0')),
       link('link-4', endpoint(routerR2, 'g0/1'), endpoint(switchS2, 'e0/1')),
       link('link-5', endpoint(switchS2, 'e0/2'), endpoint(hostB, 'eth0')),
+    ],
+  )
+}
+
+function routerMeshTopology(): TopologyState {
+  const routerR6 = router('router-r6', 'Router R6', [
+    'g0/0',
+    'g0/1',
+    'g0/2',
+  ])
+  const routerR5 = router('router-r5', 'Router R5', [
+    'g0/0',
+    'g0/1',
+    'g0/2',
+  ])
+  const routerR7 = router('router-r7', 'Router R7', [
+    'g0/0',
+    'g0/1',
+    'g0/2',
+  ])
+  const routerR4 = router('router-r4', 'Router R4', [
+    'g0/0',
+    'g0/1',
+    'g0/2',
+  ])
+  const routerR8 = router('router-r8', 'Router R8', [
+    'g0/0',
+    'g0/1',
+    'g0/2',
+  ])
+  const hostC = host('host-c', 'Host C')
+
+  return topologyState(
+    [routerR6, routerR5, routerR7, routerR4, routerR8, hostC],
+    [
+      link('link-1', endpoint(routerR6, 'g0/0'), endpoint(routerR5, 'g0/0')),
+      link('link-2', endpoint(routerR6, 'g0/1'), endpoint(routerR7, 'g0/0')),
+      link('link-3', endpoint(routerR6, 'g0/2'), endpoint(routerR4, 'g0/0')),
+      link('link-4', endpoint(routerR4, 'g0/1'), endpoint(routerR5, 'g0/1')),
+      link('link-5', endpoint(routerR4, 'g0/2'), endpoint(routerR7, 'g0/1')),
+      link('link-6', endpoint(routerR5, 'g0/2'), endpoint(routerR8, 'g0/0')),
+      link('link-7', endpoint(routerR7, 'g0/2'), endpoint(routerR8, 'g0/1')),
+      link('link-8', endpoint(routerR8, 'g0/2'), endpoint(hostC, 'eth0')),
     ],
   )
 }
@@ -285,4 +347,19 @@ function routerById(topology: TopologyState, nodeId: string): RouterNode {
   }
 
   return node
+}
+
+function segmentContaining(
+  topology: TopologyState,
+  interfaceIdToFind: InterfaceId,
+) {
+  const segment = topology.segments.find((candidate) =>
+    candidate.memberInterfaceIds.includes(interfaceIdToFind),
+  )
+
+  if (!segment) {
+    throw new Error(`Missing segment containing ${interfaceIdToFind}`)
+  }
+
+  return segment
 }
