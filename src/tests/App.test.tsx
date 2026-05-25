@@ -187,6 +187,29 @@ describe('App', () => {
     expect(useLabStore.getState().topology.segments).toHaveLength(2)
   })
 
+  test('continues Router names from the highest existing Router number', () => {
+    act(() => {
+      useLabStore.getState().addNode('router')
+      useLabStore.getState().addNode('router')
+      useLabStore.getState().addNode('router')
+      useLabStore.getState().removeNode(nodeByName('Router R2').id)
+    })
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Router' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Router' }))
+
+    expect(nodeByName('Router R4')).toBeTruthy()
+    expect(nodeByName('Router R5')).toBeTruthy()
+    expect(
+      useLabStore
+        .getState()
+        .topology.nodes.filter((node) => node.name === 'Router R3'),
+    ).toHaveLength(1)
+    expect(screen.getAllByText('Router R4').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Router R5').length).toBeGreaterThan(0)
+  })
+
   test('hides normal link status labels by default', () => {
     const { container } = render(<App />)
 

@@ -590,7 +590,7 @@ function createNode(type: NodeType, existingNodes: NetworkNode[]): NetworkNode {
   return {
     id,
     type,
-    name: `Router R${index + 1}`,
+    name: `Router R${nextRouterNumber(existingNodes)}`,
     position,
     interfaces: [],
     routingTable: [],
@@ -611,6 +611,25 @@ function hostLetter(index: number): string {
   }
 
   return `${index + 1}`
+}
+
+function nextRouterNumber(existingNodes: NetworkNode[]): number {
+  const routerNumbers = existingNodes
+    .filter((node) => node.type === 'router')
+    .flatMap((node) => [
+      numberedSuffix(node.name, /^Router R(\d+)$/),
+      numberedSuffix(node.id, /^router-r(\d+)$/),
+    ])
+    .filter((value): value is number => value !== undefined)
+
+  return Math.max(0, ...routerNumbers) + 1
+}
+
+function numberedSuffix(value: string, pattern: RegExp): number | undefined {
+  const match = value.match(pattern)
+  const parsed = match ? Number(match[1]) : NaN
+
+  return Number.isFinite(parsed) ? parsed : undefined
 }
 
 function createInterface(
