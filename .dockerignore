@@ -1,0 +1,13 @@
+.git
+.github
+.idea
+.vscode
+coverage
+dist
+dist-ssr
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.local

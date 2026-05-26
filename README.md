@@ -17,6 +17,23 @@ Build a browser-only web application where users can:
 - Inspect exact Layer 2 / Layer 3 decisions through tables, logs, and binary prefix match views.
 - Share the topology through URL-encoded state where possible.
 
+## Docker
+
+Build and run the browser app as a static Nginx container:
+
+```bash
+docker build -t network-lab .
+docker run --rm -p 8080:80 network-lab
+```
+
+Then open `http://localhost:8080`.
+
+Pushing to `main` publishes the image to GitHub Packages / GHCR with these tags:
+
+- `ghcr.io/<owner>/<repo>:latest`
+- `ghcr.io/<owner>/<repo>:main`
+- `ghcr.io/<owner>/<repo>:sha-<commit-sha>`
+
 ## Hard constraints
 
 - IPv4 only.
