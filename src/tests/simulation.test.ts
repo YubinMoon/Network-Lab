@@ -347,7 +347,7 @@ describe('IPv4 forwarding simulation', () => {
       )
 
       expect(firstR6NextHopEvent?.details?.outInterfaceId).toBe(
-        'router-r6-g0-2',
+        'router-r6-g0-1',
       )
     } finally {
       randomSpy.mockRestore()

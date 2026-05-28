@@ -67,7 +67,7 @@ describe('Routing table generation', () => {
     )
   })
 
-  test('generates equal-metric auto routes through every reachable router interface', () => {
+  test('generates equal-metric auto routes through forwarding router interfaces', () => {
     const configured = applyAutoConfiguration(routerMeshTopology())
     const routerR6 = routerById(configured, 'router-r6')
     const hostCSegment = segmentContaining(configured, 'host-c-eth0')
@@ -81,9 +81,38 @@ describe('Routing table generation', () => {
     expect(r6RoutesToHostC.map((route) => route.outInterfaceId)).toEqual([
       'router-r6-g0-0',
       'router-r6-g0-1',
-      'router-r6-g0-2',
     ])
-    expect(r6RoutesToHostC.map((route) => route.metric)).toEqual([1, 1, 1])
+    expect(r6RoutesToHostC.map((route) => route.metric)).toEqual([2, 2])
+  })
+
+  test('does not generate auto static routes through routers farther from the destination', () => {
+    const configured = applyAutoConfiguration(sharedTransitRouterTopology())
+    const routerR2 = routerById(configured, 'router-r2')
+    const routerR3 = routerById(configured, 'router-r3')
+    const hostBSegment = segmentContaining(configured, 'host-b-eth0')
+    const routesToHostB = (router: RouterNode) =>
+      router.routingTable.filter(
+        (route) =>
+          route.type === 'auto-static' &&
+          route.destinationNetwork === hostBSegment.networkAddress &&
+          route.prefixLength === hostBSegment.prefixLength,
+      )
+
+    expect(routesToHostB(routerR2).map((route) => route.nextHopIp)).toEqual([
+      '10.0.1.2',
+      '10.0.1.3',
+      '10.0.1.4',
+    ])
+    expect(routesToHostB(routerR3).map((route) => route.nextHopIp)).not.toContain(
+      '10.0.1.1',
+    )
+    expect(routesToHostB(routerR3)).toEqual([
+      expect.objectContaining({
+        nextHopIp: '10.255.2.2',
+        outInterfaceId: 'router-r3-g0-1',
+        metric: 1,
+      }),
+    ])
   })
 })
 
@@ -268,6 +297,40 @@ function routerMeshTopology(): TopologyState {
       link('link-6', endpoint(routerR5, 'g0/2'), endpoint(routerR8, 'g0/0')),
       link('link-7', endpoint(routerR7, 'g0/2'), endpoint(routerR8, 'g0/1')),
       link('link-8', endpoint(routerR8, 'g0/2'), endpoint(hostC, 'eth0')),
+    ],
+  )
+}
+
+function sharedTransitRouterTopology(): TopologyState {
+  const routerR2 = router('router-r2', 'Router R2', ['g0/0'])
+  const routerR1 = router('router-r1', 'Router R1', ['g0/0', 'g0/1'])
+  const routerR3 = router('router-r3', 'Router R3', ['g0/0', 'g0/1'])
+  const routerR4 = router('router-r4', 'Router R4', ['g0/0', 'g0/1'])
+  const routerR5 = router('router-r5', 'Router R5', [
+    'g0/0',
+    'g0/1',
+    'g0/2',
+    'g0/3',
+  ])
+  const switchS2 = switchNode('switch-s2', 'Switch S2', [
+    'e0/1',
+    'e0/2',
+    'e0/3',
+    'e0/4',
+  ])
+  const hostB = host('host-b', 'Host B')
+
+  return topologyState(
+    [routerR2, routerR1, routerR3, routerR4, routerR5, switchS2, hostB],
+    [
+      link('link-1', endpoint(routerR2, 'g0/0'), endpoint(switchS2, 'e0/1')),
+      link('link-2', endpoint(routerR1, 'g0/0'), endpoint(switchS2, 'e0/2')),
+      link('link-3', endpoint(routerR3, 'g0/0'), endpoint(switchS2, 'e0/3')),
+      link('link-4', endpoint(routerR4, 'g0/0'), endpoint(switchS2, 'e0/4')),
+      link('link-5', endpoint(routerR1, 'g0/1'), endpoint(routerR5, 'g0/0')),
+      link('link-6', endpoint(routerR3, 'g0/1'), endpoint(routerR5, 'g0/1')),
+      link('link-7', endpoint(routerR4, 'g0/1'), endpoint(routerR5, 'g0/2')),
+      link('link-8', endpoint(routerR5, 'g0/3'), endpoint(hostB, 'eth0')),
     ],
   )
 }

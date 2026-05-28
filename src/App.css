@@ -420,6 +420,35 @@ dd {
   text-align: left;
 }
 
+.routing-table-wrapper {
+  overflow-x: auto;
+}
+
+.routing-table-editor {
+  min-width: 720px;
+}
+
+.routing-table-editor input,
+.routing-table-editor select {
+  min-width: 96px;
+}
+
+.routing-table-editor input[type='checkbox'] {
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.route-cidr-inputs {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 68px;
+  gap: 6px;
+}
+
+.route-cidr-inputs input {
+  min-width: 0;
+}
+
 .inspector p {
   margin: 0;
   font-size: 14px;

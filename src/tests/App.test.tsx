@@ -320,6 +320,66 @@ describe('App', () => {
     ).not.toBeInTheDocument()
   })
 
+  test('edits Manual Static routes from the Router Inspector', () => {
+    render(<App />)
+
+    loadDefaultGatewayExample()
+
+    act(() => {
+      useLabStore.getState().selectNode('router-r1')
+    })
+
+    const routingSection = sectionByHeading(
+      screen.getByLabelText('Inspector'),
+      'Routing Table',
+    )
+
+    fireEvent.click(
+      within(routingSection).getByRole('button', {
+        name: 'Add Manual Static',
+      }),
+    )
+    fireEvent.change(within(routingSection).getByLabelText('Destination Network'), {
+      target: { value: '10.20.30.0' },
+    })
+    fireEvent.change(within(routingSection).getByLabelText('Prefix Length'), {
+      target: { value: '24' },
+    })
+    fireEvent.change(within(routingSection).getByLabelText('Next Hop'), {
+      target: { value: '10.0.1.2' },
+    })
+
+    const routerR1 = useLabStore
+      .getState()
+      .topology.nodes.find((node) => node.id === 'router-r1')
+    const manualRoute =
+      routerR1?.type === 'router'
+        ? routerR1.routingTable.find((route) => route.type === 'manual-static')
+        : undefined
+
+    expect(manualRoute).toEqual(
+      expect.objectContaining({
+        destinationNetwork: '10.20.30.0',
+        prefixLength: 24,
+        nextHopIp: '10.0.1.2',
+      }),
+    )
+
+    fireEvent.click(within(routingSection).getByRole('button', { name: 'Delete' }))
+
+    const updatedRouterR1 = useLabStore
+      .getState()
+      .topology.nodes.find((node) => node.id === 'router-r1')
+
+    expect(
+      updatedRouterR1?.type === 'router'
+        ? updatedRouterR1.routingTable.some(
+            (route) => route.type === 'manual-static',
+          )
+        : true,
+    ).toBe(false)
+  })
+
   test('shows Inspector ARP Cache entries only after their update event', () => {
     render(<App />)
 

@@ -4,6 +4,8 @@ import type {
   NetworkInterface,
   NetworkLink,
   NetworkNode,
+  RouteEntry,
+  RouterNode,
   SimulationEvent,
   TopologyState,
 } from '../../domain/types'
@@ -20,6 +22,9 @@ export function Inspector() {
   const currentEventIndex = useLabStore((state) => state.currentEventIndex)
   const deleteSelection = useLabStore((state) => state.deleteSelection)
   const updateLinkMtu = useLabStore((state) => state.updateLinkMtu)
+  const addRouterRoute = useLabStore((state) => state.addRouterRoute)
+  const updateRouterRoute = useLabStore((state) => state.updateRouterRoute)
+  const removeRouterRoute = useLabStore((state) => state.removeRouterRoute)
   const currentEvent = simulationTrace?.events[currentEventIndex]
   const inspectedTopology =
     simulationBaseTopology && simulationTrace
@@ -69,6 +74,9 @@ export function Inspector() {
               ? selectedMacAddress
               : undefined
           }
+          onAddRouterRoute={addRouterRoute}
+          onUpdateRouterRoute={updateRouterRoute}
+          onRemoveRouterRoute={removeRouterRoute}
         />
       ) : null}
       {selectedLink ? (
@@ -147,11 +155,32 @@ function NodeInspector({
   selectedRouteId,
   selectedArpIpAddress,
   selectedMacAddress,
+  onAddRouterRoute,
+  onUpdateRouterRoute,
+  onRemoveRouterRoute,
 }: {
   node: NetworkNode
   selectedRouteId?: string
   selectedArpIpAddress?: string
   selectedMacAddress?: string
+  onAddRouterRoute: (routerId: string) => void
+  onUpdateRouterRoute: (
+    routerId: string,
+    routeId: RouteEntry['id'],
+    patch: Partial<
+      Pick<
+        RouteEntry,
+        | 'destinationNetwork'
+        | 'prefixLength'
+        | 'nextHopIp'
+        | 'outInterfaceId'
+        | 'metric'
+        | 'type'
+        | 'enabled'
+      >
+    >,
+  ) => void
+  onRemoveRouterRoute: (routerId: string, routeId: RouteEntry['id']) => void
 }) {
   return (
     <>
@@ -236,42 +265,250 @@ function NodeInspector({
       {node.type === 'router' ? (
         <section>
           <h3>Routing Table</h3>
-          {node.routingTable.length === 0 ? (
-            <p>0 entries</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Destination</th>
-                  <th>Next Hop</th>
-                  <th>Out Interface</th>
-                  <th>Metric</th>
-                  <th>Type</th>
-                </tr>
-              </thead>
-              <tbody>
-                {node.routingTable.map((route) => (
-                  <tr
-                    className={
-                      route.id === selectedRouteId ? 'highlight-row' : undefined
-                    }
-                    key={route.id}
-                  >
-                    <td>
-                      {route.destinationNetwork}/{route.prefixLength}
-                    </td>
-                    <td>{route.nextHopIp ?? 'connected'}</td>
-                    <td>{route.outInterfaceId}</td>
-                    <td>{route.metric ?? '-'}</td>
-                    <td>{routeTypeLabel(route.type)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <RoutingTableEditor
+            router={node}
+            selectedRouteId={selectedRouteId}
+            onAddRoute={onAddRouterRoute}
+            onUpdateRoute={onUpdateRouterRoute}
+            onRemoveRoute={onRemoveRouterRoute}
+          />
         </section>
       ) : null}
     </>
+  )
+}
+
+function RoutingTableEditor({
+  router,
+  selectedRouteId,
+  onAddRoute,
+  onUpdateRoute,
+  onRemoveRoute,
+}: {
+  router: RouterNode
+  selectedRouteId?: string
+  onAddRoute: (routerId: string) => void
+  onUpdateRoute: (
+    routerId: string,
+    routeId: RouteEntry['id'],
+    patch: Partial<
+      Pick<
+        RouteEntry,
+        | 'destinationNetwork'
+        | 'prefixLength'
+        | 'nextHopIp'
+        | 'outInterfaceId'
+        | 'metric'
+        | 'type'
+        | 'enabled'
+      >
+    >,
+  ) => void
+  onRemoveRoute: (routerId: string, routeId: RouteEntry['id']) => void
+}) {
+  return (
+    <>
+      {router.routingTable.length === 0 ? (
+        <p>0 entries</p>
+      ) : (
+        <div className="routing-table-wrapper">
+          <table className="routing-table-editor">
+            <thead>
+              <tr>
+                <th>Enabled</th>
+                <th>Destination</th>
+                <th>Next Hop</th>
+                <th>Out Interface</th>
+                <th>Metric</th>
+                <th>Type</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {router.routingTable.map((route) => (
+                <RoutingTableRow
+                  key={route.id}
+                  router={router}
+                  route={route}
+                  selected={route.id === selectedRouteId}
+                  onUpdateRoute={onUpdateRoute}
+                  onRemoveRoute={onRemoveRoute}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <button
+        type="button"
+        disabled={router.interfaces.length === 0}
+        onClick={() => onAddRoute(router.id)}
+      >
+        Add Manual Static
+      </button>
+    </>
+  )
+}
+
+function RoutingTableRow({
+  router,
+  route,
+  selected,
+  onUpdateRoute,
+  onRemoveRoute,
+}: {
+  router: RouterNode
+  route: RouteEntry
+  selected: boolean
+  onUpdateRoute: (
+    routerId: string,
+    routeId: RouteEntry['id'],
+    patch: Partial<
+      Pick<
+        RouteEntry,
+        | 'destinationNetwork'
+        | 'prefixLength'
+        | 'nextHopIp'
+        | 'outInterfaceId'
+        | 'metric'
+        | 'type'
+        | 'enabled'
+      >
+    >,
+  ) => void
+  onRemoveRoute: (routerId: string, routeId: RouteEntry['id']) => void
+}) {
+  const editable = route.type === 'manual-static' || route.type === 'default'
+
+  if (!editable) {
+    return (
+      <tr className={selected ? 'highlight-row' : undefined}>
+        <td>{route.enabled ? 'Yes' : 'No'}</td>
+        <td>
+          {route.destinationNetwork}/{route.prefixLength}
+        </td>
+        <td>{route.nextHopIp ?? 'connected'}</td>
+        <td>{route.outInterfaceId}</td>
+        <td>{route.metric ?? '-'}</td>
+        <td>{routeTypeLabel(route.type)}</td>
+        <td>Auto</td>
+      </tr>
+    )
+  }
+
+  return (
+    <tr className={selected ? 'highlight-row' : undefined}>
+      <td>
+        <input
+          aria-label="Route Enabled"
+          checked={route.enabled}
+          name={`route-enabled-${route.id}`}
+          type="checkbox"
+          onChange={(event) =>
+            onUpdateRoute(router.id, route.id, {
+              enabled: event.target.checked,
+            })
+          }
+        />
+      </td>
+      <td>
+        <div className="route-cidr-inputs">
+          <input
+            aria-label="Destination Network"
+            disabled={route.type === 'default'}
+            name={`route-destination-${route.id}`}
+            value={route.destinationNetwork}
+            onChange={(event) =>
+              onUpdateRoute(router.id, route.id, {
+                destinationNetwork: event.target.value,
+              })
+            }
+          />
+          <input
+            aria-label="Prefix Length"
+            disabled={route.type === 'default'}
+            max={32}
+            min={0}
+            name={`route-prefix-${route.id}`}
+            type="number"
+            value={route.prefixLength}
+            onChange={(event) =>
+              onUpdateRoute(router.id, route.id, {
+                prefixLength: Number(event.target.value),
+              })
+            }
+          />
+        </div>
+      </td>
+      <td>
+        <input
+          aria-label="Next Hop"
+          name={`route-next-hop-${route.id}`}
+          value={route.nextHopIp ?? ''}
+          onChange={(event) =>
+            onUpdateRoute(router.id, route.id, {
+              nextHopIp: event.target.value,
+            })
+          }
+        />
+      </td>
+      <td>
+        <select
+          aria-label="Out Interface"
+          name={`route-out-interface-${route.id}`}
+          value={route.outInterfaceId}
+          onChange={(event) =>
+            onUpdateRoute(router.id, route.id, {
+              outInterfaceId: event.target.value,
+            })
+          }
+        >
+          {router.interfaces.map((networkInterface) => (
+            <option key={networkInterface.id} value={networkInterface.id}>
+              {networkInterface.name}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td>
+        <input
+          aria-label="Metric"
+          min={1}
+          name={`route-metric-${route.id}`}
+          type="number"
+          value={route.metric ?? 1}
+          onChange={(event) =>
+            onUpdateRoute(router.id, route.id, {
+              metric: Number(event.target.value),
+            })
+          }
+        />
+      </td>
+      <td>
+        <select
+          aria-label="Route Type"
+          name={`route-type-${route.id}`}
+          value={route.type}
+          onChange={(event) =>
+            onUpdateRoute(router.id, route.id, {
+              type: event.target.value as RouteEntry['type'],
+            })
+          }
+        >
+          <option value="manual-static">Manual Static</option>
+          <option value="default">Default</option>
+        </select>
+      </td>
+      <td>
+        <button
+          className="danger-button"
+          type="button"
+          onClick={() => onRemoveRoute(router.id, route.id)}
+        >
+          Delete
+        </button>
+      </td>
+    </tr>
   )
 }
 

@@ -14,6 +14,7 @@ import {
   type NodeType,
   type PacketGeneratorInput,
   type PacketTrace,
+  type RouteEntry,
   type RouterNode,
   type SimulationStatus,
   type SwitchNode,
@@ -58,6 +59,13 @@ interface LabStoreState {
   removeNode: (nodeId: NodeId) => void
   removeLink: (linkId: LinkId) => void
   updateLinkMtu: (linkId: LinkId, mtu: number) => void
+  addRouterRoute: (routerId: NodeId) => void
+  updateRouterRoute: (
+    routerId: NodeId,
+    routeId: RouteEntry['id'],
+    patch: EditableRoutePatch,
+  ) => void
+  removeRouterRoute: (routerId: NodeId, routeId: RouteEntry['id']) => void
   deleteSelection: () => void
   selectNode: (nodeId: NodeId) => void
   selectLink: (linkId: LinkId) => void
@@ -80,6 +88,19 @@ interface LabStoreState {
   loadTopologyFromHash: (hash: string) => void
   loadExampleTopology: (example: ExampleTopology) => void
 }
+
+type EditableRoutePatch = Partial<
+  Pick<
+    RouteEntry,
+    | 'destinationNetwork'
+    | 'prefixLength'
+    | 'nextHopIp'
+    | 'outInterfaceId'
+    | 'metric'
+    | 'type'
+    | 'enabled'
+  >
+>
 
 const emptyTopology = (): TopologyState => ({
   nodes: [],
@@ -305,6 +326,100 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
               : link,
           ),
         },
+        simulationTrace: null,
+        simulationBaseTopology: null,
+        simulationStatus: 'idle',
+        currentEventIndex: 0,
+      }
+    })
+  },
+
+  addRouterRoute: (routerId) => {
+    set((state) => {
+      const topology = topologyForCurrentEvent(state)
+      const router = topology.nodes.find(
+        (node): node is RouterNode =>
+          node.id === routerId && node.type === 'router',
+      )
+      const outInterface = router?.interfaces[0]
+
+      if (!router || !outInterface) {
+        return state
+      }
+
+      const route: RouteEntry = {
+        id: `route-${routerId}-manual-${nanoid(8)}`,
+        destinationNetwork: '10.0.0.0',
+        prefixLength: 24,
+        outInterfaceId: outInterface.id,
+        type: 'manual-static',
+        metric: 1,
+        enabled: true,
+      }
+
+      return {
+        topology: applyAutoConfiguration({
+          ...topology,
+          nodes: topology.nodes.map((node) =>
+            node.id === routerId && node.type === 'router'
+              ? { ...node, routingTable: [...node.routingTable, route] }
+              : node,
+          ),
+        }),
+        simulationTrace: null,
+        simulationBaseTopology: null,
+        simulationStatus: 'idle',
+        currentEventIndex: 0,
+      }
+    })
+  },
+
+  updateRouterRoute: (routerId, routeId, patch) => {
+    set((state) => {
+      const topology = topologyForCurrentEvent(state)
+
+      return {
+        topology: applyAutoConfiguration({
+          ...topology,
+          nodes: topology.nodes.map((node) =>
+            node.id === routerId && node.type === 'router'
+              ? {
+                  ...node,
+                  routingTable: node.routingTable.map((route) =>
+                    route.id === routeId && editableRoute(route)
+                      ? applyEditableRoutePatch(route, patch)
+                      : route,
+                  ),
+                }
+              : node,
+          ),
+        }),
+        simulationTrace: null,
+        simulationBaseTopology: null,
+        simulationStatus: 'idle',
+        currentEventIndex: 0,
+      }
+    })
+  },
+
+  removeRouterRoute: (routerId, routeId) => {
+    set((state) => {
+      const topology = topologyForCurrentEvent(state)
+
+      return {
+        topology: applyAutoConfiguration({
+          ...topology,
+          nodes: topology.nodes.map((node) =>
+            node.id === routerId && node.type === 'router'
+              ? {
+                  ...node,
+                  routingTable: node.routingTable.filter(
+                    (route) => route.id !== routeId || !editableRoute(route),
+                  ),
+                }
+              : node,
+          ),
+        }),
         simulationTrace: null,
         simulationBaseTopology: null,
         simulationStatus: 'idle',
@@ -756,6 +871,64 @@ function detachLinksFromNode(
     )
 
   return { ...node, interfaces }
+}
+
+function editableRoute(route: RouteEntry): boolean {
+  return route.type === 'manual-static' || route.type === 'default'
+}
+
+function applyEditableRoutePatch(
+  route: RouteEntry,
+  patch: EditableRoutePatch,
+): RouteEntry {
+  const routeType =
+    patch.type === 'default' || patch.type === 'manual-static'
+      ? patch.type
+      : route.type
+  const metric =
+    patch.metric === undefined
+      ? route.metric
+      : normalizeMetric(patch.metric)
+  const nextHopIp =
+    patch.nextHopIp === undefined ? route.nextHopIp : optionalText(patch.nextHopIp)
+
+  return {
+    ...route,
+    ...patch,
+    type: routeType,
+    destinationNetwork:
+      routeType === 'default'
+        ? '0.0.0.0'
+        : patch.destinationNetwork ?? route.destinationNetwork,
+    prefixLength:
+      routeType === 'default'
+        ? 0
+        : normalizePrefixLength(patch.prefixLength ?? route.prefixLength),
+    nextHopIp,
+    metric,
+  }
+}
+
+function normalizePrefixLength(prefixLength: number): number {
+  if (!Number.isFinite(prefixLength)) {
+    return 0
+  }
+
+  return Math.min(32, Math.max(0, Math.floor(prefixLength)))
+}
+
+function normalizeMetric(metric: number): number {
+  if (!Number.isFinite(metric)) {
+    return 1
+  }
+
+  return Math.max(1, Math.floor(metric))
+}
+
+function optionalText(value: string): string | undefined {
+  const trimmed = value.trim()
+
+  return trimmed ? trimmed : undefined
 }
 
 function linksSameNodes(
