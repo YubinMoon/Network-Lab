@@ -358,14 +358,14 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       }
 
       return {
-        topology: applyAutoConfiguration({
+        topology: {
           ...topology,
           nodes: topology.nodes.map((node) =>
             node.id === routerId && node.type === 'router'
               ? { ...node, routingTable: [...node.routingTable, route] }
               : node,
           ),
-        }),
+        },
         simulationTrace: null,
         simulationBaseTopology: null,
         simulationStatus: 'idle',
@@ -379,21 +379,21 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       const topology = topologyForCurrentEvent(state)
 
       return {
-        topology: applyAutoConfiguration({
+        topology: {
           ...topology,
           nodes: topology.nodes.map((node) =>
             node.id === routerId && node.type === 'router'
               ? {
                   ...node,
                   routingTable: node.routingTable.map((route) =>
-                    route.id === routeId && editableRoute(route)
+                    route.id === routeId
                       ? applyEditableRoutePatch(route, patch)
                       : route,
                   ),
                 }
               : node,
           ),
-        }),
+        },
         simulationTrace: null,
         simulationBaseTopology: null,
         simulationStatus: 'idle',
@@ -407,19 +407,19 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       const topology = topologyForCurrentEvent(state)
 
       return {
-        topology: applyAutoConfiguration({
+        topology: {
           ...topology,
           nodes: topology.nodes.map((node) =>
             node.id === routerId && node.type === 'router'
               ? {
                   ...node,
                   routingTable: node.routingTable.filter(
-                    (route) => route.id !== routeId || !editableRoute(route),
+                    (route) => route.id !== routeId,
                   ),
                 }
               : node,
           ),
-        }),
+        },
         simulationTrace: null,
         simulationBaseTopology: null,
         simulationStatus: 'idle',
@@ -467,23 +467,27 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   },
 
   resetDynamicTables: () => {
-    set((state) => ({
-      topology: {
-        ...state.topology,
-        nodes: state.topology.nodes.map((node) => {
-          if (node.type === 'host') {
+    set((state) => {
+      const topology = topologyForCurrentEvent(state)
+
+      return {
+        topology: applyAutoConfiguration({
+          ...topology,
+          nodes: topology.nodes.map((node) => {
+            if (node.type === 'host') {
+              return { ...node, arpCache: [] }
+            }
+
+            if (node.type === 'switch') {
+              return { ...node, macAddressTable: [] }
+            }
+
             return { ...node, arpCache: [] }
-          }
-
-          if (node.type === 'switch') {
-            return { ...node, macAddressTable: [] }
-          }
-
-          return { ...node, arpCache: [] }
+          }),
         }),
-      },
-      simulationBaseTopology: null,
-    }))
+        simulationBaseTopology: null,
+      }
+    })
   },
 
   clearSimulationTrace: () => {
@@ -873,18 +877,11 @@ function detachLinksFromNode(
   return { ...node, interfaces }
 }
 
-function editableRoute(route: RouteEntry): boolean {
-  return route.type === 'manual-static' || route.type === 'default'
-}
-
 function applyEditableRoutePatch(
   route: RouteEntry,
   patch: EditableRoutePatch,
 ): RouteEntry {
-  const routeType =
-    patch.type === 'default' || patch.type === 'manual-static'
-      ? patch.type
-      : route.type
+  const routeType = normalizeRouteType(patch.type, route.type)
   const metric =
     patch.metric === undefined
       ? route.metric
@@ -906,7 +903,25 @@ function applyEditableRoutePatch(
         : normalizePrefixLength(patch.prefixLength ?? route.prefixLength),
     nextHopIp,
     metric,
+    generatedBy: undefined,
+    shadowedByRouteId: undefined,
   }
+}
+
+function normalizeRouteType(
+  routeType: RouteEntry['type'] | undefined,
+  fallback: RouteEntry['type'],
+): RouteEntry['type'] {
+  if (
+    routeType === 'connected' ||
+    routeType === 'manual-static' ||
+    routeType === 'auto-static' ||
+    routeType === 'default'
+  ) {
+    return routeType
+  }
+
+  return fallback
 }
 
 function normalizePrefixLength(prefixLength: number): number {

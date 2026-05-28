@@ -364,13 +364,19 @@ describe('App', () => {
         name: 'Add Manual Static',
       }),
     )
-    fireEvent.change(within(routingSection).getByLabelText('Destination Network'), {
+    const destinationInputs =
+      within(routingSection).getAllByLabelText('Destination Network')
+    const prefixInputs = within(routingSection).getAllByLabelText('Prefix Length')
+    const nextHopInputs = within(routingSection).getAllByLabelText('Next Hop')
+    const addedRouteIndex = destinationInputs.length - 1
+
+    fireEvent.change(destinationInputs[addedRouteIndex], {
       target: { value: '10.20.30.0' },
     })
-    fireEvent.change(within(routingSection).getByLabelText('Prefix Length'), {
+    fireEvent.change(prefixInputs[addedRouteIndex], {
       target: { value: '24' },
     })
-    fireEvent.change(within(routingSection).getByLabelText('Next Hop'), {
+    fireEvent.change(nextHopInputs[addedRouteIndex], {
       target: { value: '10.0.1.2' },
     })
 
@@ -390,7 +396,11 @@ describe('App', () => {
       }),
     )
 
-    fireEvent.click(within(routingSection).getByRole('button', { name: 'Delete' }))
+    const deleteButtons = within(routingSection).getAllByRole('button', {
+      name: 'Delete',
+    })
+
+    fireEvent.click(deleteButtons[deleteButtons.length - 1])
 
     const updatedRouterR1 = useLabStore
       .getState()
@@ -403,6 +413,74 @@ describe('App', () => {
           )
         : true,
     ).toBe(false)
+  })
+
+  test('edits generated Router routes and rebuilds them from Reset Dynamic Tables', () => {
+    render(<App />)
+
+    loadDefaultGatewayExample()
+
+    act(() => {
+      useLabStore.getState().selectNode('router-r1')
+    })
+
+    const routingSection = sectionByHeading(
+      screen.getByLabelText('Inspector'),
+      'Routing Table',
+    )
+    const routerR1 = routerById('router-r1')
+    const generatedRouteIndex = routerR1.routingTable.findIndex(
+      (route) => route.type === 'connected',
+    )
+    const generatedRoute = routerR1.routingTable[generatedRouteIndex]
+
+    expect(generatedRoute).toBeTruthy()
+
+    fireEvent.change(
+      within(routingSection).getAllByLabelText('Destination Network')[
+        generatedRouteIndex
+      ],
+      {
+        target: { value: '10.99.0.0' },
+      },
+    )
+    fireEvent.change(
+      within(routingSection).getAllByLabelText('Route Type')[generatedRouteIndex],
+      {
+        target: { value: 'auto-static' },
+      },
+    )
+
+    expect(routerById('router-r1').routingTable[generatedRouteIndex]).toEqual(
+      expect.objectContaining({
+        destinationNetwork: '10.99.0.0',
+        type: 'auto-static',
+      }),
+    )
+
+    fireEvent.click(
+      within(routingSection).getAllByRole('button', { name: 'Delete' })[
+        generatedRouteIndex
+      ],
+    )
+
+    expect(
+      routerById('router-r1').routingTable.some(
+        (route) => route.id === generatedRoute.id,
+      ),
+    ).toBe(false)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset Dynamic Tables' }))
+
+    expect(routerById('router-r1').routingTable).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          destinationNetwork: generatedRoute.destinationNetwork,
+          prefixLength: generatedRoute.prefixLength,
+          type: 'connected',
+        }),
+      ]),
+    )
   })
 
   test('shows Inspector ARP Cache entries only after their update event', () => {
@@ -647,6 +725,18 @@ function nodeByName(name: string) {
 
   if (!node) {
     throw new Error(`Missing node ${name}`)
+  }
+
+  return node
+}
+
+function routerById(routerId: string) {
+  const node = useLabStore
+    .getState()
+    .topology.nodes.find((candidate) => candidate.id === routerId)
+
+  if (!node || node.type !== 'router') {
+    throw new Error(`Missing router ${routerId}`)
   }
 
   return node

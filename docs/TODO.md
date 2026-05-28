@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-29: Completed full Router `Routing Table` editing and regenerated automatic route entries from `Reset Dynamic Tables`, with regression tests.
 - 2026-05-29: Completed generated Routing Table pruning so `Connected` and `Auto Static` routes are generated only for `Network Segment`s containing Hosts, with regression tests.
 - 2026-05-29: Completed bottom panel simplification so the panel is labeled `Event Log` and only shows the Event Log view, with regression test coverage.
 - 2026-05-29: Completed distance-pruned `Auto Static` route generation so random routing only selects forwarding next hops, and added Router Inspector editing for `Manual Static` and `Default` routes, with regression tests and browser verification.

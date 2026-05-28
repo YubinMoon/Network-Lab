@@ -378,24 +378,6 @@ function RoutingTableRow({
   ) => void
   onRemoveRoute: (routerId: string, routeId: RouteEntry['id']) => void
 }) {
-  const editable = route.type === 'manual-static' || route.type === 'default'
-
-  if (!editable) {
-    return (
-      <tr className={selected ? 'highlight-row' : undefined}>
-        <td>{route.enabled ? 'Yes' : 'No'}</td>
-        <td>
-          {route.destinationNetwork}/{route.prefixLength}
-        </td>
-        <td>{route.nextHopIp ?? 'connected'}</td>
-        <td>{route.outInterfaceId}</td>
-        <td>{route.metric ?? '-'}</td>
-        <td>{routeTypeLabel(route.type)}</td>
-        <td>Auto</td>
-      </tr>
-    )
-  }
-
   return (
     <tr className={selected ? 'highlight-row' : undefined}>
       <td>
@@ -495,7 +477,9 @@ function RoutingTableRow({
             })
           }
         >
+          <option value="connected">Connected</option>
           <option value="manual-static">Manual Static</option>
+          <option value="auto-static">Auto Static</option>
           <option value="default">Default</option>
         </select>
       </td>
@@ -553,22 +537,6 @@ function ArpCacheTable({
       </tbody>
     </table>
   )
-}
-
-function routeTypeLabel(type: string): string {
-  if (type === 'connected') {
-    return 'Connected'
-  }
-
-  if (type === 'manual-static') {
-    return 'Manual Static'
-  }
-
-  if (type === 'auto-static') {
-    return 'Auto Static'
-  }
-
-  return 'Default'
 }
 
 function InterfaceTable({
