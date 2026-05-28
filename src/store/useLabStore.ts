@@ -97,7 +97,6 @@ type EditableRoutePatch = Partial<
     | 'nextHopIp'
     | 'outInterfaceId'
     | 'metric'
-    | 'type'
     | 'enabled'
   >
 >
@@ -881,7 +880,6 @@ function applyEditableRoutePatch(
   route: RouteEntry,
   patch: EditableRoutePatch,
 ): RouteEntry {
-  const routeType = normalizeRouteType(patch.type, route.type)
   const metric =
     patch.metric === undefined
       ? route.metric
@@ -892,13 +890,12 @@ function applyEditableRoutePatch(
   return {
     ...route,
     ...patch,
-    type: routeType,
     destinationNetwork:
-      routeType === 'default'
+      route.type === 'default'
         ? '0.0.0.0'
         : patch.destinationNetwork ?? route.destinationNetwork,
     prefixLength:
-      routeType === 'default'
+      route.type === 'default'
         ? 0
         : normalizePrefixLength(patch.prefixLength ?? route.prefixLength),
     nextHopIp,
@@ -906,22 +903,6 @@ function applyEditableRoutePatch(
     generatedBy: undefined,
     shadowedByRouteId: undefined,
   }
-}
-
-function normalizeRouteType(
-  routeType: RouteEntry['type'] | undefined,
-  fallback: RouteEntry['type'],
-): RouteEntry['type'] {
-  if (
-    routeType === 'connected' ||
-    routeType === 'manual-static' ||
-    routeType === 'auto-static' ||
-    routeType === 'default'
-  ) {
-    return routeType
-  }
-
-  return fallback
 }
 
 function normalizePrefixLength(prefixLength: number): number {

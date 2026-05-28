@@ -444,17 +444,14 @@ describe('App', () => {
         target: { value: '10.99.0.0' },
       },
     )
-    fireEvent.change(
-      within(routingSection).getAllByLabelText('Route Type')[generatedRouteIndex],
-      {
-        target: { value: 'auto-static' },
-      },
-    )
+    expect(
+      within(routingSection).queryByLabelText('Route Type'),
+    ).not.toBeInTheDocument()
 
     expect(routerById('router-r1').routingTable[generatedRouteIndex]).toEqual(
       expect.objectContaining({
         destinationNetwork: '10.99.0.0',
-        type: 'auto-static',
+        type: 'connected',
       }),
     )
 

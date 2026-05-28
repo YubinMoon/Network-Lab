@@ -175,7 +175,6 @@ function NodeInspector({
         | 'nextHopIp'
         | 'outInterfaceId'
         | 'metric'
-        | 'type'
         | 'enabled'
       >
     >,
@@ -299,7 +298,6 @@ function RoutingTableEditor({
         | 'nextHopIp'
         | 'outInterfaceId'
         | 'metric'
-        | 'type'
         | 'enabled'
       >
     >,
@@ -466,23 +464,7 @@ function RoutingTableRow({
           }
         />
       </td>
-      <td>
-        <select
-          aria-label="Route Type"
-          name={`route-type-${route.id}`}
-          value={route.type}
-          onChange={(event) =>
-            onUpdateRoute(router.id, route.id, {
-              type: event.target.value as RouteEntry['type'],
-            })
-          }
-        >
-          <option value="connected">Connected</option>
-          <option value="manual-static">Manual Static</option>
-          <option value="auto-static">Auto Static</option>
-          <option value="default">Default</option>
-        </select>
-      </td>
+      <td>{routeTypeLabel(route.type)}</td>
       <td>
         <button
           className="danger-button"
@@ -494,6 +476,22 @@ function RoutingTableRow({
       </td>
     </tr>
   )
+}
+
+function routeTypeLabel(type: RouteEntry['type']): string {
+  if (type === 'connected') {
+    return 'Connected'
+  }
+
+  if (type === 'manual-static') {
+    return 'Manual Static'
+  }
+
+  if (type === 'auto-static') {
+    return 'Auto Static'
+  }
+
+  return 'Default'
 }
 
 function ArpCacheTable({
