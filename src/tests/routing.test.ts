@@ -65,6 +65,15 @@ describe('Routing table generation', () => {
         }),
       ]),
     )
+    expect(routerR1.routingTable).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          destinationNetwork: '10.255.1.0',
+          prefixLength: 30,
+          type: 'connected',
+        }),
+      ]),
+    )
   })
 
   test('generates equal-metric auto routes through forwarding router interfaces', () => {
@@ -113,6 +122,33 @@ describe('Routing table generation', () => {
         metric: 1,
       }),
     ])
+  })
+
+  test('keeps generated routes limited to Host-containing segments', () => {
+    const configured = applyAutoConfiguration(sharedTransitRouterTopology())
+    const routerR1 = routerById(configured, 'router-r1')
+    const routerR2 = routerById(configured, 'router-r2')
+    const routerOnlyNetworks = new Set(['10.0.1.0', '10.255.1.0'])
+
+    for (const router of [routerR1, routerR2]) {
+      expect(
+        router.routingTable
+          .filter(
+            (route) =>
+              route.type === 'connected' || route.type === 'auto-static',
+          )
+          .some((route) => routerOnlyNetworks.has(route.destinationNetwork)),
+      ).toBe(false)
+    }
+    expect(routerR2.routingTable).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          destinationNetwork: '10.0.2.0',
+          prefixLength: 24,
+          type: 'auto-static',
+        }),
+      ]),
+    )
   })
 })
 

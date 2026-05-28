@@ -59,6 +59,7 @@ export function generateConnectedRoutes(
   topology: TopologyState,
 ): Map<string, RouteEntry[]> {
   const routesByRouter = new Map<string, RouteEntry[]>()
+  const hostSegmentIds = segmentsContainingHosts(topology.nodes)
 
   for (const node of topology.nodes) {
     if (node.type !== 'router') {
@@ -68,7 +69,10 @@ export function generateConnectedRoutes(
     const routes = node.interfaces
       .filter(
         (networkInterface) =>
-          networkInterface.ipAddress && networkInterface.prefixLength !== undefined,
+          networkInterface.ipAddress &&
+          networkInterface.prefixLength !== undefined &&
+          networkInterface.segmentId &&
+          hostSegmentIds.has(networkInterface.segmentId),
       )
       .map((networkInterface): RouteEntry => {
         const prefixLength = networkInterface.prefixLength ?? 0
@@ -99,6 +103,7 @@ export function generateAutoStaticRoutes(
   const routesByRouter = new Map<string, RouteEntry[]>()
   const routerInterfaces = routerInterfaceRefs(topology.nodes)
   const routerGraph = buildRouterGraph(topology.segments, routerInterfaces)
+  const hostSegmentIds = segmentsContainingHosts(topology.nodes)
 
   for (const router of topology.nodes.filter((node) => node.type === 'router')) {
     const connectedSegmentIds = new Set(
@@ -109,6 +114,10 @@ export function generateAutoStaticRoutes(
     const routes: RouteEntry[] = []
 
     for (const segment of topology.segments) {
+      if (!hostSegmentIds.has(segment.id)) {
+        continue
+      }
+
       if (connectedSegmentIds.has(segment.id)) {
         continue
       }
@@ -236,6 +245,20 @@ function routeTypePrecedence(type: RouteType): number {
   }
 
   return 3
+}
+
+function segmentsContainingHosts(nodes: NetworkNode[]): Set<string> {
+  return new Set(
+    nodes.flatMap((node) => {
+      if (node.type !== 'host') {
+        return []
+      }
+
+      return node.interfaces
+        .map((networkInterface) => networkInterface.segmentId)
+        .filter((segmentId): segmentId is string => Boolean(segmentId))
+    }),
+  )
 }
 
 function routerInterfaceRefs(nodes: NetworkNode[]): RouterInterfaceRef[] {
