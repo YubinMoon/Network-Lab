@@ -41,6 +41,31 @@ describe('App', () => {
     )
   })
 
+  test('renders Event Log as the only bottom panel view', () => {
+    render(<App />)
+
+    const panel = screen.getByLabelText('Simulation Panel')
+
+    expect(
+      within(panel).getByRole('heading', { name: 'Event Log' }),
+    ).toBeInTheDocument()
+    expect(within(panel).getByLabelText('Event Log')).toBeInTheDocument()
+    expect(within(panel).queryByRole('button')).not.toBeInTheDocument()
+    expect(within(panel).queryByText('Packet Trace')).not.toBeInTheDocument()
+    expect(
+      within(panel).queryByRole('button', { name: 'Timeline' }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(panel).queryByRole('button', { name: 'Layer View' }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(panel).queryByRole('button', { name: 'Packet Detail' }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(panel).queryByRole('button', { name: 'Binary Match' }),
+    ).not.toBeInTheDocument()
+  })
+
   test('adds nodes to the topology store from the Palette', () => {
     render(<App />)
 

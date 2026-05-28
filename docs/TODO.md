@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-29: Completed bottom panel simplification so the panel is labeled `Event Log` and only shows the Event Log view, with regression test coverage.
 - 2026-05-29: Completed distance-pruned `Auto Static` route generation so random routing only selects forwarding next hops, and added Router Inspector editing for `Manual Static` and `Default` routes, with regression tests and browser verification.
 - 2026-05-26: Completed Docker runtime image support with Nginx SPA serving and GitHub Actions publishing to GitHub Packages / GHCR on `main` pushes.
 - 2026-05-25: Completed `MTU Fragmentation and Random Routing` redesign so R1 fragments before R2 randomly fans fragments across multiple router paths, and fragmented router forwarding advances hop-by-hop with out-of-order Host B arrival, with regression tests and browser verification.
