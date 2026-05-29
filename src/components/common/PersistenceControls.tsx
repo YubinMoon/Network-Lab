@@ -6,8 +6,6 @@ type TextSource = 'manual' | 'export' | 'share'
 export function PersistenceControls() {
   const exportTopologyJson = useLabStore((state) => state.exportTopologyJson)
   const importTopologyJson = useLabStore((state) => state.importTopologyJson)
-  const saveTopology = useLabStore((state) => state.saveTopology)
-  const loadTopology = useLabStore((state) => state.loadTopology)
   const createShareUrl = useLabStore((state) => state.createShareUrl)
   const lastExportJson = useLabStore((state) => state.lastExportJson)
   const lastShareUrl = useLabStore((state) => state.lastShareUrl)
@@ -36,12 +34,6 @@ export function PersistenceControls() {
         </button>
         <button type="button" onClick={() => importTopologyJson(importText)}>
           Import JSON
-        </button>
-        <button type="button" onClick={saveTopology}>
-          Save Local
-        </button>
-        <button type="button" onClick={loadTopology}>
-          Load Local
         </button>
         <button
           type="button"

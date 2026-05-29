@@ -602,7 +602,6 @@ Allow topology sharing without backend.
 
 ```text
 src/persistence/urlState.ts
-src/persistence/localStorage.ts
 src/persistence/schemaVersion.ts
 ```
 
@@ -610,8 +609,6 @@ src/persistence/schemaVersion.ts
 
 - Export topology to JSON.
 - Import topology from JSON.
-- Save topology to Local Storage.
-- Load topology from Local Storage.
 - Create share URL with compressed state.
 - Load topology from share URL.
 
@@ -686,4 +683,3 @@ Switches: 1-5
 Routers: 1-5
 Links: 2-20
 ```
-

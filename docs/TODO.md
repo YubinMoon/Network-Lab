@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-29: Completed removal of `Save Local` and `Load Local` buttons, Local Storage persistence helpers, and related tests/docs.
 - 2026-05-29: Completed ARP Request recipient cache updates so ARP responders learn requester IP/MAC before replying, and ICMP Echo Reply generation reuses request-path dynamic tables.
 - 2026-05-29: Completed README refresh with Korean project overview and project-page screenshot.
 - 2026-05-29: Completed code-duplication cleanup and function decomposition across domain simulation path lookup and network owner indexing logic.
@@ -75,7 +76,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 - 2026-05-14: Completed Phase 8 deterministic IPv4 forwarding trace with host send decisions, router TTL decrement, route lookup, re-encapsulation, and packet drop reasons.
 - 2026-05-14: Completed Phase 9 ICMP Echo Request/Reply, Generic IPv4 Packet payloads, Packet Generator UI, and Event Log integration.
 - 2026-05-14: Completed Phase 10 simulation controls, Timeline, Event Log, Layer View, Packet Detail, Binary Match, and current packet token UI.
-- 2026-05-14: Completed Phase 11 JSON export/import, Local Storage save/load, compressed URL hash sharing, and persistence controls.
+- 2026-05-14: Completed Phase 11 JSON export/import, compressed URL hash sharing, and persistence controls.
 - 2026-05-14: Completed Phase 12 required example topologies and Example loader UI with initial packet traces.
 - 2026-05-14: Completed Phase 13 validation warnings, unsupported L2 loop simulation block, reset controls, event log clearing, and route table highlighting.
 - 2026-05-14: Completed completion-audit follow-up for ARP reply/cache events, switch MAC learning events in packet traces, deterministic `Link Loss` drops, `Packet Count` batch simulation, and dynamic table updates.
@@ -182,7 +183,6 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 - [x] Export topology JSON.
 - [x] Import topology JSON.
-- [x] Save and load topology from Local Storage.
 - [x] Encode and decode share URLs with compressed state.
 
 ### Phase 12. Examples

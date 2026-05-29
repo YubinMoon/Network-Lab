@@ -29,10 +29,6 @@ import {
   topologyFromJson,
   topologyToJson,
 } from '../persistence/urlState'
-import {
-  loadTopologyFromLocalStorage,
-  saveTopologyToLocalStorage,
-} from '../persistence/localStorage'
 import type { ExampleTopology } from '../examples/topologies'
 
 export type LabSelection =
@@ -82,8 +78,6 @@ interface LabStoreState {
   setSimulationSpeed: (speed: number) => void
   exportTopologyJson: () => void
   importTopologyJson: (json: string) => void
-  saveTopology: () => void
-  loadTopology: () => void
   createShareUrl: () => void
   loadTopologyFromHash: (hash: string) => void
   loadExampleTopology: (example: ExampleTopology) => void
@@ -610,28 +604,6 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
 
     set((state) => ({
       topology: applyAutoConfiguration(topologyFromJson(json)),
-      selectedObject: null,
-      simulationTrace: null,
-      simulationBaseTopology: null,
-      simulationStatus: 'idle',
-      currentEventIndex: 0,
-      canvasFitRequestId: state.canvasFitRequestId + 1,
-    }))
-  },
-
-  saveTopology: () => {
-    saveTopologyToLocalStorage(topologyForCurrentEvent(get()))
-  },
-
-  loadTopology: () => {
-    const topology = loadTopologyFromLocalStorage()
-
-    if (!topology) {
-      return
-    }
-
-    set((state) => ({
-      topology: applyAutoConfiguration(topology),
       selectedObject: null,
       simulationTrace: null,
       simulationBaseTopology: null,

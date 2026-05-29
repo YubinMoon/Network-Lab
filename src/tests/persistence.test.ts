@@ -6,11 +6,6 @@ import {
   topologyToJson,
 } from '../persistence/urlState'
 import {
-  LOCAL_STORAGE_KEY,
-  loadTopologyFromLocalStorage,
-  saveTopologyToLocalStorage,
-} from '../persistence/localStorage'
-import {
   DEFAULT_LAB_SETTINGS,
   type HostNode,
   type TopologyState,
@@ -32,15 +27,6 @@ describe('Topology persistence', () => {
     expect(decodeTopologyHash(hash)).toEqual(topology)
   })
 
-  test('round trips topology through Local Storage', () => {
-    const topology = sampleTopology()
-    const storage = new MemoryStorage()
-
-    saveTopologyToLocalStorage(topology, storage)
-
-    expect(storage.getItem(LOCAL_STORAGE_KEY)).toContain('"schemaVersion"')
-    expect(loadTopologyFromLocalStorage(storage)).toEqual(topology)
-  })
 })
 
 function sampleTopology(): TopologyState {
@@ -71,33 +57,5 @@ function sampleTopology(): TopologyState {
     links: [],
     segments: [],
     settings: DEFAULT_LAB_SETTINGS,
-  }
-}
-
-class MemoryStorage implements Storage {
-  private readonly values = new Map<string, string>()
-
-  get length(): number {
-    return this.values.size
-  }
-
-  clear(): void {
-    this.values.clear()
-  }
-
-  getItem(key: string): string | null {
-    return this.values.get(key) ?? null
-  }
-
-  key(index: number): string | null {
-    return Array.from(this.values.keys())[index] ?? null
-  }
-
-  removeItem(key: string): void {
-    this.values.delete(key)
-  }
-
-  setItem(key: string, value: string): void {
-    this.values.set(key, value)
   }
 }

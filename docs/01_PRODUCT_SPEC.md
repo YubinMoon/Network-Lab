@@ -443,8 +443,6 @@ Also support:
 
 - Export JSON.
 - Import JSON.
-- Save to Local Storage.
-- Load from Local Storage.
 
 ## 21. Example topologies
 
@@ -460,4 +458,3 @@ Required examples:
 8. `TTL Expired Loop`
 9. `Link Loss and Unreliable Delivery`
 10. `Multiple Datagrams and Connectionless Delivery`
-

@@ -32,7 +32,6 @@ Domain Layer
 
 Persistence Layer
 ├─ URL hash state
-├─ Local Storage
 ├─ Export JSON
 └─ Import JSON
 ```
@@ -90,7 +89,6 @@ src/
 │
 ├─ persistence/
 │  ├─ urlState.ts
-│  ├─ localStorage.ts
 │  └─ schemaVersion.ts
 │
 ├─ examples/
@@ -111,7 +109,7 @@ Use three different state categories.
 
 ### 3.1 Persistent topology state
 
-This is saved to URL/local storage/export JSON.
+This is saved to URL state or export JSON.
 
 Includes:
 
@@ -555,4 +553,3 @@ interface PersistedLabState {
 ```
 
 Add migration functions for future changes.
-
