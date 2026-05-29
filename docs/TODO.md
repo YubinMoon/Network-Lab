@@ -1,198 +1,31 @@
 # TODO
 
-This file tracks planned work and completed work for the IPv4 Network Visualization Lab.
+This file tracks current and planned work for the IPv4 Network Visualization Lab.
 
 ## Working Rules
 
-- Review this file before starting a task.
-- Keep task scope small enough to verify independently.
-- Move completed items to `Completed Work` with the date and commit hash when available.
-- Commit after each completed work unit.
-
-## Completed Work
-
-- 2026-05-29: Completed removal of `Save Local` and `Load Local` buttons, Local Storage persistence helpers, and related tests/docs.
-- 2026-05-29: Completed ARP Request recipient cache updates so ARP responders learn requester IP/MAC before replying, and ICMP Echo Reply generation reuses request-path dynamic tables.
-- 2026-05-29: Completed README refresh with Korean project overview and project-page screenshot.
-- 2026-05-29: Completed code-duplication cleanup and function decomposition across domain simulation path lookup and network owner indexing logic.
-  - Added shared interface lookup helper module (`networkLookup`) and replaced duplicated interface/IP-MAC search in simulation.
-  - Added shared interface-owner indexing helper (`collectInterfaceOwnerMap`) to remove duplicated ownership mapping in `autoConfig` and `segments`.
-  - Split large router forwarding function into smaller route/input/ARP helpers and merged small switch ingress helpers, plus extracted shared destination-delivery event emitter.
-  - Removed remaining duplicate `interfaceByIp` lookup in canvas link animation and switched to shared `networkLookup` utility.
-  - Consolidated IP/MAC interface lookup logic in `networkLookup` into a single internal iterator helper.
-- 2026-05-29: Completed removal of preseeded `Manual Static` routes from the `Redundant Router Mesh` example while preserving generated `Auto Static` forwarding and delivery.
-- 2026-05-29: Completed resizable left Palette, bottom Event Log, and right Inspector panels with pointer and keyboard resizing, with regression tests and browser verification.
-- 2026-05-29: Completed `Play` auto-generating the current Packet Generator trace when no Event Log exists while preserving play-only behavior for existing Event Logs, with regression tests and browser verification.
-- 2026-05-29: Completed Router `Routing Table` edit-mode toggle so routes render as a read-only text table by default and switch to editable controls only after `Edit Routing Table`, with regression tests and browser verification.
-- 2026-05-29: Completed top title bar placement for playback controls, log clearing, and speed selection, with regression tests and browser verification.
-- 2026-05-29: Completed read-only Routing Table `Type` handling so generated routes cannot be changed into `Manual Static` routes, with regression tests.
-- 2026-05-29: Completed full Router `Routing Table` editing and regenerated automatic route entries from `Reset Dynamic Tables`, with regression tests.
-- 2026-05-29: Completed generated Routing Table pruning so `Connected` and `Auto Static` routes are generated only for `Network Segment`s containing Hosts, with regression tests.
-- 2026-05-29: Completed bottom panel simplification so the panel is labeled `Event Log` and only shows the Event Log view, with regression test coverage.
-- 2026-05-29: Completed distance-pruned `Auto Static` route generation so random routing only selects forwarding next hops, and added Router Inspector editing for `Manual Static` and `Default` routes, with regression tests and browser verification.
-- 2026-05-26: Completed Docker runtime image support with Nginx SPA serving and GitHub Actions publishing to GitHub Packages / GHCR on `main` pushes.
-- 2026-05-25: Completed `MTU Fragmentation and Random Routing` redesign so R1 fragments before R2 randomly fans fragments across multiple router paths, and fragmented router forwarding advances hop-by-hop with out-of-order Host B arrival, with regression tests and browser verification.
-- 2026-05-25: Completed `MTU Fragmentation and Random Routing` example revision so loaded examples sync Packet Generator defaults and expose visible low-MTU fragmentation links, with regression tests and browser verification.
-- 2026-05-25: Completed `Redundant Router Mesh` revision to match the requested 9-router visual shape with Host A/B at both ends and Router R1-R9 across the mesh.
-- 2026-05-25: Completed `Redundant Router Mesh` example with two Hosts and six interconnected Routers, plus example coverage and browser verification.
-- 2026-05-25: Completed ingress-interface exclusion for router route selection so random routing never forwards a packet back out the interface it arrived on, with regression tests and browser module verification.
-- 2026-05-25: Completed random equal-metric router route selection by removing Packet Count and router-arrival round-robin counters, with regression tests and browser verification.
-- 2026-05-25: Completed Packet Count batch dynamic-table carryover so later Generic IPv4 packets reuse ARP Cache and MAC Address Table entries from earlier packets, with regression tests and browser verification.
-- 2026-05-25: Completed per-router-arrival round-robin route selection so repeated visits to the same router advance to the next equal-metric route, with regression tests.
-- 2026-05-25: Completed dense router mesh fixes so preserved P2P segment addresses are not reused, auto static routes generate equal-metric alternatives through every reachable router interface, Routing Table shows Metric, and TTL-bound loops are testable, with regression tests and browser verification.
-- 2026-05-25: Completed green primary-action styling for the Packet Generator `Send` button, with regression tests and browser verification.
-- 2026-05-25: Completed red destructive-action styling for the Palette `Clear` button, with regression tests and browser verification.
-- 2026-05-25: Completed removal of the redundant `Load First Milestone` button and store action, replacing test coverage with the `Default Gateway Forwarding` example path.
-- 2026-05-25: Completed sequential Router node IDs from the Router button so generated interface IDs and Routing Table `Out Interface` values use `router-rN-g0-M`, with regression tests and browser verification.
-- 2026-05-25: Completed Inspector width adjustment and sequential Router naming from the Router button, with regression tests and browser verification.
-- 2026-05-25: Completed Link MTU and IPv4 fragmentation support with full IPv4 header values, equal-route round-robin forwarding, a fragmentation example, regression tests, and browser verification.
-- 2026-05-25: Completed Example list consolidation so entries with the same physical node configuration are represented once, with regression tests and browser verification.
-- 2026-05-25: Completed active Link packet detail cleanup by removing the non-protocol Transit block and unused top navigation buttons, with regression tests and browser verification.
-- 2026-05-25: Completed active Link packet inspection so selecting a moving Link shows Ethernet, ARP, IPv4, ICMP, and payload details in the Inspector, with regression tests and browser verification.
-- 2026-05-25: Completed Host source-interface selection so multi-interface Hosts send through the interface that matches the destination subnet, with regression tests and browser verification.
-- 2026-05-25: Completed loaded example link/interface normalization so adding Host C to Host B creates Host B eth1 and keeps Host C outside the switch broadcast domain, with regression tests and browser verification.
-- 2026-05-25: Completed selected-node highlight and Host multi-interface link handling so additional Host links create separate interfaces and L2 segments, with regression tests and browser verification.
-- 2026-05-25: Completed switch known-unicast event fix so simulation uses Layer 2 MAC-table decisions and animates only the selected egress link, with regression tests and browser verification.
-- 2026-05-25: Completed follow-up canvas camera fix so explicit fit requests do not replay when nodes are added after a topology load, with regression tests and browser verification.
-- 2026-05-25: Completed canvas camera preservation on node creation by removing unconditional React Flow fit behavior while keeping explicit fit requests for topology loads, with regression tests and browser verification.
-- 2026-05-24: Completed current-event topology editing so loading an example and editing before playback no longer leaks precomputed ARP Cache or MAC Address Table entries, with regression tests and browser verification.
-- 2026-05-24: Completed event-indexed Inspector dynamic tables so ARP Cache and MAC Address Table reflect the selected simulation event, with regression tests and browser verification.
-- 2026-05-24: Completed example MAC assignment fix and stopped presenting Layer 2 switch ports as endpoint MAC owners, with validation/UI regression tests and browser verification.
-- 2026-05-24: Completed playback control order update so `Reset` sits to the right of the `Play`/`Pause` toggle, with regression tests and browser verification.
-- 2026-05-24: Completed playback controls cleanup by merging `Play` and `Pause` into one green/red toggle button in the left panel, with regression tests and browser verification.
-- 2026-05-24: Completed link status label cleanup so normal `Link - up` labels stay hidden unless selected while down links remain visible, with regression tests and browser verification.
-- 2026-05-22: Completed `Load Example` layout fix so example nodes are spaced apart and the canvas refits on example load, with regression tests and browser verification.
-- 2026-05-22: Completed ARP sent event animation fix so ARP Request/Reply sent events show only the first physical hop, with switched-topology regression tests and browser verification.
-- 2026-05-22: Completed directional `Link` packet animation so reverse traffic renders from target to source, with focused tests and browser verification.
-- 2026-05-14: Created project TODO tracking and documented TODO/git workflow in `AGENTS.md`.
-- 2026-05-14: Completed Phase 0 project bootstrap with Vite, React, TypeScript strict mode, Vitest, baseline folders, and passing test/build checks.
-- 2026-05-14: Completed Phase 1 domain data model plus IPv4, MAC, and validation utilities with unit tests.
-- 2026-05-14: Completed Phase 2 topology store and React Flow editor with Host, Switch, Router, Link, selection, deletion, and Inspector support.
-- 2026-05-14: Completed Phase 3 Network Segment detection with interface graph components, LAN/point-to-point classification, segment identity preservation, and Inspector visibility.
-- 2026-05-14: Completed Phase 4 auto MAC/IP/default gateway assignment and displayed IPv4 interface configuration in the canvas and Inspector.
-- 2026-05-14: Completed Phase 5 connected route generation, auto static route generation, route precedence, and Longest Prefix Match lookup tests.
-- 2026-05-14: Completed Phase 6 Layer 2 switch MAC learning, broadcast flooding, unknown unicast flooding, known unicast forwarding, and MAC Address Table display.
-- 2026-05-14: Completed Phase 7 ARP target selection, ARP request/reply frame helpers, ARP cache updates, and ARP Cache Inspector tables.
-- 2026-05-14: Completed Phase 8 deterministic IPv4 forwarding trace with host send decisions, router TTL decrement, route lookup, re-encapsulation, and packet drop reasons.
-- 2026-05-14: Completed Phase 9 ICMP Echo Request/Reply, Generic IPv4 Packet payloads, Packet Generator UI, and Event Log integration.
-- 2026-05-14: Completed Phase 10 simulation controls, Timeline, Event Log, Layer View, Packet Detail, Binary Match, and current packet token UI.
-- 2026-05-14: Completed Phase 11 JSON export/import, compressed URL hash sharing, and persistence controls.
-- 2026-05-14: Completed Phase 12 required example topologies and Example loader UI with initial packet traces.
-- 2026-05-14: Completed Phase 13 validation warnings, unsupported L2 loop simulation block, reset controls, event log clearing, and route table highlighting.
-- 2026-05-14: Completed completion-audit follow-up for ARP reply/cache events, switch MAC learning events in packet traces, deterministic `Link Loss` drops, `Packet Count` batch simulation, and dynamic table updates.
-- 2026-05-14: Completed completion-audit follow-up for animated packet movement on active `Link` edges during packet events.
-- 2026-05-14: Completed completion-audit follow-up for ARP Cache hit simulation after dynamic cache entries are populated.
-- 2026-05-14: Completed completion-audit follow-up for exact unsupported Layer 2 loop warning text.
-- 2026-05-14: Completed final completion audit with clean TODO, passing test/build/lint checks, and verified local app response.
-- 2026-05-14: Completed fixed-height lab layout, internal Inspector/Palette scrolling, collapsible Simulation Panel, and visible current-packet canvas state.
-- 2026-05-14: Completed layout adjustment moving playback controls into the left sidebar, expanding the Event Log row, and making the Inspector span the full right column.
-- 2026-05-15: Completed follow-up keeping playback controls visible in the Palette after sending packets and widening the Event Log list indentation.
-- 2026-05-15: Completed dark application theme, icon-only Event Log panel toggle, fullscreen browser acceptance verification, and Export/Clear/Import JSON UI fix.
+- Keep planned items small enough to verify with one concrete check.
+- Move finished work into `Completed Summary`.
+- Do not mix unrelated work in one commit.
 
 ## In Progress
 
-- None.
+- README example topology/link-share section is being edited.
 
 ## Planned Work
 
-### Phase 0. Project Bootstrap
+- Add final Share URL links to README example entries after the pages are prepared.
 
-- [x] Create a Vite + React + TypeScript app at the repository root.
-- [x] Install runtime dependencies: `@xyflow/react`, `zustand`, `lz-string`, `nanoid`, `clsx`.
-- [x] Install dev dependencies: `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `jsdom`.
-- [x] Ensure TypeScript strict mode is enabled.
-- [x] Create the basic source folder structure.
-- [x] Configure the test runner.
-- [x] Verify `npm run test` passes.
-- [x] Verify `npm run build` passes.
+## Completed Summary
 
-### Phase 1. Domain Utilities and Data Model
-
-- [x] Define core topology, interface, route, packet, and simulation event types.
-- [x] Implement IPv4 utilities.
-- [x] Implement MAC address utilities.
-- [x] Add validation helpers.
-- [x] Add unit tests for IPv4 and MAC utilities.
-
-### Phase 2. Topology Store and Basic Editor
-
-- [x] Add global lab state store.
-- [x] Add canvas editor with `Host`, `Switch`, `Router`, and `Link`.
-- [x] Add basic inspector for selected objects.
-- [x] Verify the first target topology can be created visually.
-
-### Phase 3. Network Segment Detection
-
-- [x] Implement interface graph helpers.
-- [x] Implement `Network Segment` detection.
-- [x] Preserve segment identity when possible after edits.
-- [x] Add segment detection tests.
-
-### Phase 4. Auto IP/MAC/Gateway Assignment
-
-- [x] Implement deterministic MAC assignment.
-- [x] Implement LAN and point-to-point CIDR assignment.
-- [x] Implement host and router interface IP assignment.
-- [x] Implement default gateway assignment.
-- [x] Add auto configuration tests.
-
-### Phase 5. Connected and Auto Static Routes
-
-- [x] Generate `Connected` routes.
-- [x] Generate `Auto Static` routes.
-- [x] Implement route precedence for equal prefix length.
-- [x] Add routing table tests.
-
-### Phase 6. Layer 2 Switching
-
-- [x] Implement switch MAC learning.
-- [x] Implement broadcast flooding.
-- [x] Implement unknown unicast flooding.
-- [x] Implement known unicast forwarding.
-- [x] Add Layer 2 tests.
-
-### Phase 7. ARP Simulation
-
-- [x] Implement ARP cache lookup.
-- [x] Implement ARP request/reply behavior.
-- [x] Ensure ARP stays within one `Network Segment`.
-- [x] Add ARP tests.
-
-### Phase 8. IPv4 Forwarding Simulation
-
-- [x] Implement host send path.
-- [x] Implement router decapsulation, TTL decrement, route lookup, ARP, and re-encapsulation.
-- [x] Implement required packet drop reasons.
-- [x] Add simulation tests.
-
-### Phase 9. ICMP Echo and Generic IPv4 Packets
-
-- [x] Implement `ICMP Echo Request`.
-- [x] Implement `ICMP Echo Reply`.
-- [x] Implement `Generic IPv4 Packet` with RAW payload.
-- [x] Add packet generator UI.
-
-### Phase 10. Animation and Simulation Panels
-
-- [x] Add animated packet tokens.
-- [x] Add simulation controls.
-- [x] Add `Event Log`, `Layer View`, `Packet Detail`, `Binary Match`, and `Timeline` panels.
-- [x] Highlight relevant tables during simulation.
-
-### Phase 11. URL State and Export/Import
-
-- [x] Export topology JSON.
-- [x] Import topology JSON.
-- [x] Encode and decode share URLs with compressed state.
-
-### Phase 12. Examples
-
-- [x] Add required example topologies.
-- [x] Ensure each example can be simulated immediately.
-
-### Phase 13. Polish and Validation
-
-- [x] Add validation warnings.
-- [x] Add unsupported L2 loop detection.
-- [x] Improve inspector tables and selected field highlights.
-- [x] Add reset controls for dynamic tables and event logs.
+- 2026-05-29: Compressed `docs` into concise current-reference files and summarized historical TODO entries.
+- 2026-05-29: Removed `Save Local` and `Load Local`, deleted Local Storage persistence code, updated tests and docs.
+- 2026-05-29: Updated ARP behavior so ARP Request recipients learn requester IP/MAC before replying, and ICMP Echo Reply uses request-path dynamic tables.
+- 2026-05-29: Refreshed README with Korean overview, demo/project image, routing-focused copy, and example topology recommendations.
+- 2026-05-29: Completed routing table editor/read-only behavior, generated route pruning, `Auto Static` route fixes, and route helper refactors.
+- 2026-05-29: Completed resizable Palette/Event Log/Inspector panels and moved playback/log/speed controls into the title bar.
+- 2026-05-26: Added Docker/Nginx runtime image and GHCR publishing workflow.
+- 2026-05-25: Added MTU fragmentation, router mesh examples, random/equal-route forwarding behavior, packet batch cache carryover, active link packet inspection, and related UI polish.
+- 2026-05-24: Improved event-indexed Inspector tables, playback controls, validation display, link labels, and example dynamic-table behavior.
+- 2026-05-22: Fixed example loading layout and directional packet animation on links.
+- 2026-05-14 to 2026-05-15: Built the first complete lab: Vite/React/TypeScript bootstrap, topology editor, segment detection, auto IP/MAC/host gateway, routing, L2 switching, ARP, IPv4 forwarding, ICMP, event log, packet details, URL sharing, examples, validation, and final audit.
