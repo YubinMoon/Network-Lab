@@ -381,11 +381,31 @@ describe('App', () => {
       'Routing Table',
     )
 
-    fireEvent.click(
-      within(routingSection).getByRole('button', {
+    expect(
+      within(routingSection).queryByRole('button', {
         name: 'Add Manual Static',
       }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(routingSection).queryByLabelText('Destination Network'),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      within(routingSection).getByRole('button', {
+        name: 'Edit Routing Table',
+      }),
     )
+
+    const addManualStaticButton = within(routingSection).getByRole('button', {
+      name: 'Add Manual Static',
+    })
+
+    expect(
+      within(routingSection).getByRole('button', { name: 'Done Editing' }),
+    ).toBeInTheDocument()
+    expect(addManualStaticButton).toBeEnabled()
+
+    fireEvent.click(addManualStaticButton)
     const destinationInputs =
       within(routingSection).getAllByLabelText('Destination Network')
     const prefixInputs = within(routingSection).getAllByLabelText('Prefix Length')
@@ -458,14 +478,39 @@ describe('App', () => {
 
     expect(generatedRoute).toBeTruthy()
 
-    fireEvent.change(
+    expect(
+      within(routingSection).getByText(
+        `${generatedRoute.destinationNetwork}/${generatedRoute.prefixLength}`,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(routingSection).queryByLabelText('Destination Network'),
+    ).not.toBeInTheDocument()
+    expect(
+      within(routingSection).queryByRole('button', { name: 'Delete' }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      within(routingSection).getByRole('button', {
+        name: 'Edit Routing Table',
+      }),
+    )
+
+    const generatedDestinationInput =
       within(routingSection).getAllByLabelText('Destination Network')[
         generatedRouteIndex
-      ],
-      {
-        target: { value: '10.99.0.0' },
-      },
-    )
+      ]
+    const generatedDeleteButton =
+      within(routingSection).getAllByRole('button', { name: 'Delete' })[
+        generatedRouteIndex
+      ]
+
+    expect(generatedDestinationInput).toBeEnabled()
+    expect(generatedDeleteButton).toBeEnabled()
+
+    fireEvent.change(generatedDestinationInput, {
+      target: { value: '10.99.0.0' },
+    })
     expect(
       within(routingSection).queryByLabelText('Route Type'),
     ).not.toBeInTheDocument()
@@ -477,11 +522,7 @@ describe('App', () => {
       }),
     )
 
-    fireEvent.click(
-      within(routingSection).getAllByRole('button', { name: 'Delete' })[
-        generatedRouteIndex
-      ],
-    )
+    fireEvent.click(generatedDeleteButton)
 
     expect(
       routerById('router-r1').routingTable.some(

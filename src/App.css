@@ -407,6 +407,11 @@ dd {
   min-width: 720px;
 }
 
+.routing-table-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .routing-table-editor input,
 .routing-table-editor select {
   min-width: 96px;

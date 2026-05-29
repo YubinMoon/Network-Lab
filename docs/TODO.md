@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-29: Completed Router `Routing Table` edit-mode toggle so routes render as a read-only text table by default and switch to editable controls only after `Edit Routing Table`, with regression tests and browser verification.
 - 2026-05-29: Completed top title bar placement for playback controls, log clearing, and speed selection, with regression tests and browser verification.
 - 2026-05-29: Completed read-only Routing Table `Type` handling so generated routes cannot be changed into `Manual Static` routes, with regression tests.
 - 2026-05-29: Completed full Router `Routing Table` editing and regenerated automatic route entries from `Reset Dynamic Tables`, with regression tests.
