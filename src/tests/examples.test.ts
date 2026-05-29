@@ -251,6 +251,36 @@ describe('Example topologies', () => {
     )
   })
 
+  test('redundant router mesh example does not preseed Manual Static routes', () => {
+    const example = EXAMPLE_TOPOLOGIES.find(
+      (candidate) => candidate.id === 'redundant-router-mesh',
+    )
+
+    expect(example).toBeTruthy()
+
+    if (!example) {
+      return
+    }
+
+    const manualRoutes = example.topology.nodes
+      .filter((node) => node.type === 'router')
+      .flatMap((node) => node.routingTable)
+      .filter((route) => route.type === 'manual-static')
+    const configuredTopology = applyAutoConfiguration(example.topology)
+    const configuredManualRoutes = configuredTopology.nodes
+      .filter((node) => node.type === 'router')
+      .flatMap((node) => node.routingTable)
+      .filter((route) => route.type === 'manual-static')
+    const autoStaticRoutes = configuredTopology.nodes
+      .filter((node) => node.type === 'router')
+      .flatMap((node) => node.routingTable)
+      .filter((route) => route.type === 'auto-static')
+
+    expect(manualRoutes).toHaveLength(0)
+    expect(configuredManualRoutes).toHaveLength(0)
+    expect(autoStaticRoutes.length).toBeGreaterThan(0)
+  })
+
   test('redundant router mesh example can deliver across the Router mesh', () => {
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.99)
     const example = EXAMPLE_TOPOLOGIES.find(

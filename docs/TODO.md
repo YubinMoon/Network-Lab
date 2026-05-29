@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-29: Completed removal of preseeded `Manual Static` routes from the `Redundant Router Mesh` example while preserving generated `Auto Static` forwarding and delivery.
 - 2026-05-29: Completed resizable left Palette, bottom Event Log, and right Inspector panels with pointer and keyboard resizing, with regression tests and browser verification.
 - 2026-05-29: Completed `Play` auto-generating the current Packet Generator trace when no Event Log exists while preserving play-only behavior for existing Event Logs, with regression tests and browser verification.
 - 2026-05-29: Completed Router `Routing Table` edit-mode toggle so routes render as a read-only text table by default and switch to editable controls only after `Edit Routing Table`, with regression tests and browser verification.
