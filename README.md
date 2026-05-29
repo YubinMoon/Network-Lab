@@ -1,27 +1,23 @@
-# IPv4 Network Visualization Lab
+# IPv4 Network Visualization Lab - Net Lab
+
+Net Lab 브라우저에서 네트워크 토폴로지를 만들어 패킷의 이동 과정을 관찰할 수 있는 네트워크 시뮬레이터 입니다.
+
+[Demo](https://nlab.limeskin.kr/)
 
 ![IPv4 Network Visualization Lab 프로젝트 화면](docs/images/project-page.png)
 
-IPv4 Network Visualization Lab은 브라우저에서 네트워크 토폴로지를 만들고, 패킷이 이동하는 과정을 눈으로 따라가며 학습할 수 있는 교육용 시뮬레이터입니다.
-
-`Host`, `Switch`, `Router`, `Link`를 캔버스에 배치하면 앱이 `Network Segment`, IP 주소, `Default Gateway`, 라우팅 정보를 자동으로 구성합니다. 사용자는 복잡한 설정을 먼저 외우기보다, 네트워크가 실제로 어떤 순서로 동작하는지 화면에서 확인할 수 있습니다.
+`Host`, `Switch`, `Router`를 캔버스에 자유롭게 배치하고 연결해 네트워크를 구성하면 자동으로 IP 주소와 `Routing Table`을 구성합니다. 사용자는 네트워크가 실제로 어떤 순서로 동작하는지 각 정보의 상태는 어떤지 화면에서 실시간으로 관찰할 수 있습니다.
 
 ## 주요 기능
 
-- 캔버스에서 `Host`, `Switch`, `Router`, `Link`로 토폴로지 구성
-- `Network Segment`, IP 주소, `Default Gateway` 자동 설정
+- 캔버스에서 `Host`, `Switch`, `Router`로 네트워크 토폴로지 구성
+- IP 주소/대역, `Routing Table` 자동 구성
 - `ICMP Echo Request`와 `ICMP Echo Reply` 흐름 시뮬레이션
 - `Generic IPv4 Packet` 전송과 RAW payload 확인
 - ARP 요청/응답, `ARP Cache`, 스위치 `MAC Address Table` 변화 추적
 - `Routing Table`, `Longest Prefix Match`, `TTL` 감소 과정 확인
 - 패킷 이동 애니메이션과 `Event Log`로 처리 단계 확인
-- URL 공유, JSON 내보내기/가져오기, 로컬 저장 지원
-
-## 이런 실험을 할 수 있습니다
-
-가장 기본적인 예시는 `Host A - Switch S1 - Router R1 - Switch S2 - Host B` 형태의 토폴로지입니다. `Host A`에서 `Host B`로 패킷을 보내면, `Host A`가 `Default Gateway`를 선택하고 ARP를 수행한 뒤, `Router R1`이 패킷을 받아 라우팅하고 다시 캡슐화하는 과정을 순서대로 볼 수 있습니다.
-
-동일 LAN 통신, 라우터 간 전달, MTU Fragmentation, 중복 라우터 경로, 라우팅 실패 같은 예제도 제공되어 네트워크 동작을 비교해 볼 수 있습니다.
+- URL 공유, JSON 내보내기/가져오기
 
 ## 실행하기
 
