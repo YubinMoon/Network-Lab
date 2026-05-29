@@ -227,6 +227,7 @@ function simulateIpv4PacketInternal(
     sourceHost.arpCache,
     arpTarget.targetIp,
   )
+  let arpRequestFrame: EthernetFrame | undefined
 
   if (cachedArpEntry) {
     eventBuilder.add('arp-cache-hit', sourceHost.id, {
@@ -239,7 +240,7 @@ function simulateIpv4PacketInternal(
       },
     })
   } else {
-    const arpRequestFrame = createArpRequestFrame({
+    arpRequestFrame = createArpRequestFrame({
       frameId: `${packetId}-arp-request`,
       senderIp: sourceInterface.ipAddress,
       senderMac: sourceInterface.macAddress,
@@ -295,13 +296,14 @@ function simulateIpv4PacketInternal(
     })
   }
 
-  if (!cachedArpEntry) {
+  if (!cachedArpEntry && arpRequestFrame) {
     addArpReplyAndCacheEvents({
       topology,
       requester: sourceHost,
       requesterInterface: sourceInterface,
       responder: nextHopInterface,
       targetIp: arpTarget.targetIp,
+      requestFrame: arpRequestFrame,
       packetId,
       eventBuilder,
     })
@@ -873,6 +875,7 @@ function resolveRouterArpAndLayer2({
     requesterInterface: result.outInterface,
     responder: arpResponder,
     targetIp: result.nextHopIp,
+    requestFrame: arpRequestFrame,
     packetId: datagram.id,
     eventBuilder,
   })
@@ -1262,6 +1265,7 @@ function addArpReplyAndCacheEvents({
   requesterInterface,
   responder,
   targetIp,
+  requestFrame,
   packetId,
   eventBuilder,
 }: {
@@ -1270,9 +1274,18 @@ function addArpReplyAndCacheEvents({
   requesterInterface: NetworkInterface
   responder: LocatedInterface
   targetIp: string
+  requestFrame: EthernetFrame
   packetId: string
   eventBuilder: ReturnType<typeof createEventBuilder>
 }) {
+  addArpRequestRecipientCacheEvent({
+    responder,
+    requesterInterface,
+    requestFrame,
+    packetId,
+    eventBuilder,
+  })
+
   const arpReplyFrame = createArpReplyFrame({
     frameId: `${packetId}-arp-reply`,
     senderIp: targetIp,
@@ -1308,6 +1321,37 @@ function addArpReplyAndCacheEvents({
       ipAddress: targetIp,
       macAddress: responder.networkInterface.macAddress,
       interfaceId: requesterInterface.id,
+    },
+  })
+}
+
+function addArpRequestRecipientCacheEvent({
+  responder,
+  requesterInterface,
+  requestFrame,
+  packetId,
+  eventBuilder,
+}: {
+  responder: LocatedInterface
+  requesterInterface: NetworkInterface
+  requestFrame: EthernetFrame
+  packetId: string
+  eventBuilder: ReturnType<typeof createEventBuilder>
+}) {
+  if (!requesterInterface.ipAddress) {
+    return
+  }
+
+  eventBuilder.add('arp-cache-updated', responder.node.id, {
+    description: `${responder.node.name} updated ARP Cache for ${requesterInterface.ipAddress} from ARP Request.`,
+    packetId,
+    frameId: requestFrame.id,
+    details: {
+      ethernetFrame: requestFrame,
+      ipAddress: requesterInterface.ipAddress,
+      macAddress: requesterInterface.macAddress,
+      interfaceId: responder.networkInterface.id,
+      sourceInterfaceId: requesterInterface.id,
     },
   })
 }
@@ -1720,8 +1764,12 @@ function maybeReplyToIcmpEcho(
     return trace(packetId, input, requestEvents, { status: 'delivered' })
   }
 
-  const replyTrace = simulateIpv4PacketInternal(
+  const topologyForReply = applySimulationTraceToTopology(
     topology,
+    trace(packetId, input, requestEvents, { status: 'delivered' }),
+  )
+  const replyTrace = simulateIpv4PacketInternal(
+    topologyForReply,
     {
       sourceHostId: destinationNode.id,
       destinationIp: datagram.srcIp,

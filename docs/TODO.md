@@ -11,6 +11,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-29: Completed ARP Request recipient cache updates so ARP responders learn requester IP/MAC before replying, and ICMP Echo Reply generation reuses request-path dynamic tables.
 - 2026-05-29: Completed README refresh with Korean project overview and project-page screenshot.
 - 2026-05-29: Completed code-duplication cleanup and function decomposition across domain simulation path lookup and network owner indexing logic.
   - Added shared interface lookup helper module (`networkLookup`) and replaced duplicated interface/IP-MAC search in simulation.
@@ -89,7 +90,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## In Progress
 
-- [x] Refactor duplicated packet guard/path utilities into shared domain helpers, remove tiny duplicate helpers (`hostIpAddress`, `sameSubnet`), and split large path/selection logic helpers in simulation/link animation code.
+- None.
 
 ## Planned Work
 

@@ -90,6 +90,79 @@ describe('IPv4 forwarding simulation', () => {
     expect(switchS1?.macAddressTable.length).toBeGreaterThan(0)
   })
 
+  test('updates the ARP Request recipient cache before sending ARP Reply', () => {
+    const topology = applyAutoConfiguration(firstMilestoneTopology())
+    const trace = simulateIpv4Packet(topology, {
+      sourceHostId: 'host-a',
+      destinationIp: '10.0.2.10',
+      ttl: 64,
+      packetType: 'generic-ipv4',
+    })
+    const hostBUpdateIndex = trace.events.findIndex(
+      (event) =>
+        event.type === 'arp-cache-updated' &&
+        event.actorNodeId === 'host-b' &&
+        event.details?.ipAddress === '10.0.2.1',
+    )
+    const hostBReplyIndex = trace.events.findIndex(
+      (event) =>
+        event.type === 'arp-reply-sent' &&
+        event.actorNodeId === 'host-b' &&
+        event.details?.ipAddress === '10.0.2.10',
+    )
+    const nextTopology = applySimulationTraceToTopology(topology, trace)
+
+    expect(hostBUpdateIndex).toBeGreaterThanOrEqual(0)
+    expect(hostBReplyIndex).toBeGreaterThan(hostBUpdateIndex)
+    expect(hostById(nextTopology, 'host-b').arpCache).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ipAddress: '10.0.2.1',
+          macAddress: interfaceByName(topology, 'router-r1', 'g0/1').macAddress,
+          interfaceId: 'host-b-eth0',
+        }),
+      ]),
+    )
+    expect(routerById(nextTopology, 'router-r1').arpCache).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ipAddress: '10.0.1.10',
+          macAddress: interfaceByName(topology, 'host-a', 'eth0').macAddress,
+          interfaceId: 'router-r1-g0-0',
+        }),
+      ]),
+    )
+  })
+
+  test('uses ARP Request learned entries when generating ICMP Echo Reply', () => {
+    const topology = applyAutoConfiguration(firstMilestoneTopology())
+    const trace = simulateIpv4Packet(topology, {
+      sourceHostId: 'host-a',
+      destinationIp: '10.0.2.10',
+      ttl: 64,
+      packetType: 'icmp-echo',
+    })
+    const hostBMisses = trace.events.filter(
+      (event) =>
+        event.type === 'arp-cache-miss' && event.actorNodeId === 'host-b',
+    )
+    const hostBHits = trace.events.filter(
+      (event) =>
+        event.type === 'arp-cache-hit' &&
+        event.actorNodeId === 'host-b' &&
+        event.details?.ipAddress === '10.0.2.1',
+    )
+    const hostBRequests = trace.events.filter(
+      (event) =>
+        event.type === 'arp-request-sent' && event.actorNodeId === 'host-b',
+    )
+
+    expect(trace.result.status).toBe('delivered')
+    expect(hostBMisses).toHaveLength(0)
+    expect(hostBHits).toHaveLength(1)
+    expect(hostBRequests).toHaveLength(0)
+  })
+
   test('records known unicast switch forwarding only on the learned egress port', () => {
     const topology = applyAutoConfiguration(threeHostSwitchTopology())
     const trace = simulateIpv4Packet(topology, {
@@ -744,6 +817,19 @@ function hostById(topology: TopologyState, id: string): HostNode {
 
   if (!node) {
     throw new Error(`Missing host ${id}`)
+  }
+
+  return node
+}
+
+function routerById(topology: TopologyState, id: string): RouterNode {
+  const node = topology.nodes.find(
+    (candidate): candidate is RouterNode =>
+      candidate.id === id && candidate.type === 'router',
+  )
+
+  if (!node) {
+    throw new Error(`Missing router ${id}`)
   }
 
   return node
