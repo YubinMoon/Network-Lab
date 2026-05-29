@@ -324,158 +324,42 @@ function fragmentationRandomRoutingTopology(): TopologyState {
 function redundantRouterMeshTopology(): TopologyState {
   const hostA = positioned(host('host-a', 'Host A'), 40, 320)
   const routerR1 = positioned(
-    {
-      ...router('router-r1', 'Router R1', ['g0/0', 'g0/1', 'g0/2']),
-      routingTable: [
-        manualRoute(
-          'route-r1-manual-via-r2',
-          '10.0.2.0',
-          24,
-          '10.255.1.2',
-          'router-r1-g0-1',
-        ),
-        manualRoute(
-          'route-r1-manual-via-r3',
-          '10.0.2.0',
-          24,
-          '10.255.2.2',
-          'router-r1-g0-2',
-        ),
-      ],
-    } satisfies RouterNode,
+    router('router-r1', 'Router R1', ['g0/0', 'g0/1', 'g0/2']),
     250,
     320,
   )
   const routerR2 = positioned(
-    {
-      ...router('router-r2', 'Router R2', ['g0/0', 'g0/1', 'g0/2']),
-      routingTable: [
-        manualRoute(
-          'route-r2-manual-via-r9',
-          '10.0.2.0',
-          24,
-          '10.255.3.2',
-          'router-r2-g0-1',
-        ),
-        manualRoute(
-          'route-r2-manual-via-r8',
-          '10.0.2.0',
-          24,
-          '10.255.4.2',
-          'router-r2-g0-2',
-        ),
-      ],
-    } satisfies RouterNode,
+    router('router-r2', 'Router R2', ['g0/0', 'g0/1', 'g0/2']),
     500,
     190,
   )
   const routerR3 = positioned(
-    {
-      ...router('router-r3', 'Router R3', ['g0/0', 'g0/1', 'g0/2']),
-      routingTable: [
-        manualRoute(
-          'route-r3-manual-via-r8',
-          '10.0.2.0',
-          24,
-          '10.255.5.2',
-          'router-r3-g0-1',
-        ),
-        manualRoute(
-          'route-r3-manual-via-r7',
-          '10.0.2.0',
-          24,
-          '10.255.6.2',
-          'router-r3-g0-2',
-        ),
-      ],
-    } satisfies RouterNode,
+    router('router-r3', 'Router R3', ['g0/0', 'g0/1', 'g0/2']),
     500,
     450,
   )
   const routerR9 = positioned(
-    {
-      ...router('router-r9', 'Router R9', ['g0/0', 'g0/1']),
-      routingTable: [
-        manualRoute(
-          'route-r9-manual-via-r4',
-          '10.0.2.0',
-          24,
-          '10.255.7.2',
-          'router-r9-g0-1',
-        ),
-      ],
-    } satisfies RouterNode,
+    router('router-r9', 'Router R9', ['g0/0', 'g0/1']),
     760,
     70,
   )
   const routerR8 = positioned(
-    {
-      ...router('router-r8', 'Router R8', ['g0/0', 'g0/1', 'g0/2', 'g0/3']),
-      routingTable: [
-        manualRoute(
-          'route-r8-manual-via-r4',
-          '10.0.2.0',
-          24,
-          '10.255.8.2',
-          'router-r8-g0-2',
-        ),
-        manualRoute(
-          'route-r8-manual-via-r5',
-          '10.0.2.0',
-          24,
-          '10.255.9.2',
-          'router-r8-g0-3',
-        ),
-      ],
-    } satisfies RouterNode,
+    router('router-r8', 'Router R8', ['g0/0', 'g0/1', 'g0/2', 'g0/3']),
     740,
     320,
   )
   const routerR7 = positioned(
-    {
-      ...router('router-r7', 'Router R7', ['g0/0', 'g0/1']),
-      routingTable: [
-        manualRoute(
-          'route-r7-manual-via-r5',
-          '10.0.2.0',
-          24,
-          '10.255.10.2',
-          'router-r7-g0-1',
-        ),
-      ],
-    } satisfies RouterNode,
+    router('router-r7', 'Router R7', ['g0/0', 'g0/1']),
     760,
     570,
   )
   const routerR4 = positioned(
-    {
-      ...router('router-r4', 'Router R4', ['g0/0', 'g0/1', 'g0/2']),
-      routingTable: [
-        manualRoute(
-          'route-r4-manual-via-r6',
-          '10.0.2.0',
-          24,
-          '10.255.11.2',
-          'router-r4-g0-2',
-        ),
-      ],
-    } satisfies RouterNode,
+    router('router-r4', 'Router R4', ['g0/0', 'g0/1', 'g0/2']),
     990,
     240,
   )
   const routerR5 = positioned(
-    {
-      ...router('router-r5', 'Router R5', ['g0/0', 'g0/1', 'g0/2']),
-      routingTable: [
-        manualRoute(
-          'route-r5-manual-via-r6',
-          '10.0.2.0',
-          24,
-          '10.255.12.2',
-          'router-r5-g0-2',
-        ),
-      ],
-    } satisfies RouterNode,
+    router('router-r5', 'Router R5', ['g0/0', 'g0/1', 'g0/2']),
     1010,
     500,
   )

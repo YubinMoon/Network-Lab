@@ -14,6 +14,7 @@ import {
   createIpv4Datagram,
   createIpv4Frame,
   forwardIpv4FrameAtRouter,
+  type RouterForwardingResult,
 } from './ipv4'
 import {
   fragmentIpv4Datagram,
@@ -22,7 +23,11 @@ import {
 } from './fragmentation'
 import { ipMatchesPrefix } from './ip'
 import { processSwitchFrame } from './l2'
-import { normalizeMac } from './mac'
+import {
+  findInterfacePathInterfaceIds,
+  findInterfacePathLinkIds,
+} from './interfacePath'
+import { interfaceByIp, interfaceByMac, type LocatedInterface } from './networkLookup'
 import { BROADCAST_MAC, DEFAULT_LINK_MTU } from './types'
 import { validateTopology } from './validation'
 import type {
@@ -30,13 +35,13 @@ import type {
   HostNode,
   InterfaceId,
   IPv4Datagram,
-  LinkId,
   MacTableEntry,
   NetworkInterface,
   NetworkNode,
   PacketDropReason,
   PacketTrace,
   PacketType,
+  RouteEntry,
   RouterNode,
   SegmentId,
   SimulationEvent,
@@ -52,11 +57,6 @@ export interface Ipv4SimulationInput {
   payload?: string
   packetCount?: number
   intervalMs?: number
-}
-
-interface LocatedInterface {
-  node: NetworkNode
-  networkInterface: NetworkInterface
 }
 
 interface SimulationRunOptions {
@@ -83,17 +83,10 @@ export function simulateIpv4Packet(
   topology: TopologyState,
   input: Ipv4SimulationInput,
 ): PacketTrace {
-  const unsupportedLoop = validateTopology(topology).find(
-    (issue) => issue.code === 'unsupported-l2-loop',
-  )
+  const blockedTrace = unsupportedLoopTrace(topology, 'packet-1', input)
 
-  if (topology.settings.blockUnsupportedL2Loops && unsupportedLoop) {
-    return droppedTrace(
-      'packet-1',
-      input,
-      'Unsupported L2 Loop',
-      createEventBuilder(),
-    )
+  if (blockedTrace) {
+    return blockedTrace
   }
 
   return simulateIpv4PacketInternal(topology, input, {
@@ -114,17 +107,10 @@ export function simulateIpv4PacketBatch(
     return simulateIpv4Packet(topology, input)
   }
 
-  const unsupportedLoop = validateTopology(topology).find(
-    (issue) => issue.code === 'unsupported-l2-loop',
-  )
+  const blockedTrace = unsupportedLoopTrace(topology, 'packet-1', input)
 
-  if (topology.settings.blockUnsupportedL2Loops && unsupportedLoop) {
-    return droppedTrace(
-      'packet-1',
-      input,
-      'Unsupported L2 Loop',
-      createEventBuilder(),
-    )
+  if (blockedTrace) {
+    return blockedTrace
   }
 
   const packetTraces: PacketTrace[] = []
@@ -144,6 +130,27 @@ export function simulateIpv4PacketBatch(
   }
 
   return mergePacketTraces(input, packetTraces)
+}
+
+function unsupportedLoopTrace(
+  topology: TopologyState,
+  packetId: string,
+  input: Ipv4SimulationInput,
+): PacketTrace | undefined {
+  const unsupportedLoop = validateTopology(topology).find(
+    (issue) => issue.code === 'unsupported-l2-loop',
+  )
+
+  if (!(topology.settings.blockUnsupportedL2Loops && unsupportedLoop)) {
+    return undefined
+  }
+
+  return droppedTrace(
+    packetId,
+    input,
+    'Unsupported L2 Loop',
+    createEventBuilder(),
+  )
 }
 
 function simulateIpv4PacketInternal(
@@ -480,43 +487,25 @@ function forwardThroughRouters(
 
     const destinationInterface = interfaceByIp(topology, input.destinationIp)
 
+    const outInterface = routerResult.outInterface
+
     if (
       destinationInterface &&
-      routerResult.outInterface?.segmentId ===
-        destinationInterface.networkInterface.segmentId
+      outInterface &&
+      outInterface.segmentId === destinationInterface.networkInterface.segmentId
     ) {
-      const deliveredFrames = routedFrames
-
-      if (routerResult.outInterface) {
-        for (const deliveredFrame of deliveredFrames) {
-          addForwardedFrameEvents({
-            topology,
-            actorNode: currentRouter,
-            outInterface: routerResult.outInterface,
-            ethernetFrame: deliveredFrame,
-            eventBuilder,
-          })
-        }
-      }
-
-      for (const deliveredFrame of deliveredFrames) {
-        eventBuilder.add('packet-delivered', destinationInterface.node.id, {
-          description: `${destinationInterface.node.name} delivered IPv4 Datagram.`,
-          packetId,
-          frameId: deliveredFrame.id,
-          details: {
-            datagram: deliveredFrame.payload,
-            ethernetFrame: deliveredFrame,
-            sourceInterfaceId: routerResult.outInterface?.id,
-            deliveredInterfaceId: destinationInterface.networkInterface.id,
-          },
-        })
-      }
+      const deliveredDatagrams = addDestinationDeliveryEvents({
+        topology,
+        actorNode: currentRouter,
+        outInterface,
+        destinationInterface,
+        routedFrames,
+        packetId,
+        eventBuilder,
+      })
       addReassemblyEventIfNeeded({
         datagram: routerResult.datagram ?? initialDatagram,
-        datagrams: deliveredFrames.map(
-          (deliveredFrame) => deliveredFrame.payload as IPv4Datagram,
-        ),
+        datagrams: deliveredDatagrams,
         actorNodeId: destinationInterface.node.id,
         actorName: destinationInterface.node.name,
         eventBuilder,
@@ -595,26 +584,15 @@ function forwardAtRouterWithEvents(
   options: { deferForwardingEvents?: boolean } = {},
 ) {
   const datagram = frame.payload as IPv4Datagram
+  const routeCandidate = routeCandidateForRouterLog(router)
 
-  eventBuilder.add('router-frame-received', router.id, {
-    description: `${router.name} received Ethernet Frame on ${ingressInterface.name}.`,
-    packetId: datagram.id,
-    frameId: frame.id,
-    details: {
-      ethernetFrame: frame,
-      ingressInterfaceId: ingressInterface.id,
-    },
+  addRouterFrameInputEvents({
+    router,
+    ingressInterface,
+    frame,
+    datagram,
+    eventBuilder,
   })
-  eventBuilder.add('router-frame-decapsulated', router.id, {
-    description: `${router.name} decapsulated IPv4 Datagram.`,
-    packetId: datagram.id,
-    frameId: frame.id,
-    details: { datagram },
-  })
-
-  const routeCandidate = router.routingTable.find((route) =>
-    route.enabled ? route.destinationNetwork : false,
-  )
   const result = forwardIpv4FrameAtRouter({
     router,
     ingressInterfaceId: ingressInterface.id,
@@ -624,21 +602,12 @@ function forwardAtRouterWithEvents(
     frameId: nextFrameId,
   })
 
-  if (result.previousTtl !== undefined && result.datagram) {
-    eventBuilder.add('router-ttl-decremented', router.id, {
-      description: `${router.name} decremented TTL from ${result.previousTtl} to ${result.datagram.ttl}.`,
-      packetId: datagram.id,
-      details: {
-        previousTtl: result.previousTtl,
-        nextTtl: result.datagram.ttl,
-      },
-    })
-  }
-
-  eventBuilder.add('router-route-lookup-started', router.id, {
-    description: `${router.name} started Routing Table Lookup for ${datagram.dstIp}.`,
-    packetId: datagram.id,
-    details: { destinationIp: datagram.dstIp, routeCandidate },
+  addRouterRouteEvents({
+    router,
+    datagram,
+    routeCandidate,
+    result,
+    eventBuilder,
   })
 
   if (result.status === 'dropped') {
@@ -646,108 +615,25 @@ function forwardAtRouterWithEvents(
     return result
   }
 
-  eventBuilder.add('router-route-selected', router.id, {
-    description: `${router.name} selected ${result.selectedRoute?.destinationNetwork}/${result.selectedRoute?.prefixLength} by Longest Prefix Match.`,
-    packetId: datagram.id,
-    details: { selectedRoute: result.selectedRoute },
+  const resolution = resolveRouterArpAndLayer2({
+    topology,
+    router,
+    result,
+    datagram,
+    eventBuilder,
   })
-  eventBuilder.add('router-next-hop-selected', router.id, {
-    description: `${router.name} selected Next Hop ${result.nextHopIp} through ${result.outInterface?.name}.`,
-    packetId: datagram.id,
-    details: {
-      nextHopIp: result.nextHopIp,
-      outInterfaceId: result.outInterface?.id,
-    },
-  })
-  let egressTargetInterface: NetworkInterface | undefined
 
-  if (result.nextHopIp && result.outInterface) {
-    const cachedArpEntry = findArpCacheEntry(router.arpCache, result.nextHopIp)
-
-    if (cachedArpEntry) {
-      eventBuilder.add('arp-cache-hit', router.id, {
-        description: `${router.name} ARP Cache hit for ${result.nextHopIp}.`,
-        packetId: datagram.id,
-        details: {
-          ipAddress: cachedArpEntry.ipAddress,
-          macAddress: cachedArpEntry.macAddress,
-          interfaceId: cachedArpEntry.interfaceId,
-        },
-      })
-    } else {
-      const arpRequestFrame = createArpRequestFrame({
-        frameId: `${datagram.id}-arp-request`,
-        senderIp: result.outInterface.ipAddress ?? '0.0.0.0',
-        senderMac: result.outInterface.macAddress,
-        targetIp: result.nextHopIp,
-      })
-
-      eventBuilder.add('arp-cache-miss', router.id, {
-        description: `${router.name} ARP Cache miss for ${result.nextHopIp}.`,
-        packetId: datagram.id,
-        details: { targetIp: result.nextHopIp },
-      })
-      eventBuilder.add('arp-request-sent', router.id, {
-        description: `${router.name} sent ARP Request for ${result.nextHopIp}.`,
-        packetId: datagram.id,
-        frameId: arpRequestFrame.id,
-        details: {
-          ethernetFrame: arpRequestFrame,
-          sourceInterfaceId: result.outInterface.id,
-          targetIp: result.nextHopIp,
-        },
-      })
-      addSwitchForwardingEvents({
-        topology,
-        segmentId: result.outInterface.segmentId,
-        sourceInterface: result.outInterface,
-        ethernetFrame: arpRequestFrame,
-        packetId: datagram.id,
-        eventBuilder,
-      })
-    }
-
-    const arpResponder = interfaceByIp(topology, result.nextHopIp)
-
-    if (!arpResponder) {
-      eventBuilder.addDrop(datagram.id, router.id, 'No ARP Reply')
-      return {
-        ...result,
-        status: 'dropped' as const,
-        frame: undefined,
-        reason: 'No ARP Reply' as const,
-      }
-    }
-    egressTargetInterface = arpResponder.networkInterface
-
-    const l2DropReason = packetDropBetweenInterfaces(
-      topology,
-      result.outInterface,
-      arpResponder.networkInterface,
-    )
-
-    if (l2DropReason) {
-      eventBuilder.addDrop(datagram.id, router.id, l2DropReason)
-      return {
-        ...result,
-        status: 'dropped' as const,
-        frame: undefined,
-        reason: l2DropReason,
-      }
-    }
-
-    if (!cachedArpEntry) {
-      addArpReplyAndCacheEvents({
-        topology,
-        requester: router,
-        requesterInterface: result.outInterface,
-        responder: arpResponder,
-        targetIp: result.nextHopIp,
-        packetId: datagram.id,
-        eventBuilder,
-      })
+  if (resolution.status === 'dropped') {
+    return {
+      ...result,
+      status: 'dropped',
+      frame: undefined,
+      frames: undefined,
+      reason: resolution.reason,
     }
   }
+
+  const egressTargetInterface = resolution.egressTargetInterface
   const fragmentation =
     result.datagram && result.outInterface && egressTargetInterface
       ? fragmentDatagramForPath({
@@ -801,6 +687,200 @@ function forwardAtRouterWithEvents(
   }
 
   return forwardedResult
+}
+
+function routeCandidateForRouterLog(router: RouterNode): RouteEntry | undefined {
+  return router.routingTable.find((route) => route.enabled)
+}
+
+function addRouterFrameInputEvents({
+  router,
+  ingressInterface,
+  frame,
+  datagram,
+  eventBuilder,
+}: {
+  router: RouterNode
+  ingressInterface: NetworkInterface
+  frame: EthernetFrame
+  datagram: IPv4Datagram
+  eventBuilder: ReturnType<typeof createEventBuilder>
+}) {
+  eventBuilder.add('router-frame-received', router.id, {
+    description: `${router.name} received Ethernet Frame on ${ingressInterface.name}.`,
+    packetId: datagram.id,
+    frameId: frame.id,
+    details: {
+      ethernetFrame: frame,
+      ingressInterfaceId: ingressInterface.id,
+    },
+  })
+  eventBuilder.add('router-frame-decapsulated', router.id, {
+    description: `${router.name} decapsulated IPv4 Datagram.`,
+    packetId: datagram.id,
+    frameId: frame.id,
+    details: { datagram },
+  })
+}
+
+function addRouterRouteEvents({
+  router,
+  datagram,
+  routeCandidate,
+  result,
+  eventBuilder,
+}: {
+  router: RouterNode
+  datagram: IPv4Datagram
+  routeCandidate: RouteEntry | undefined
+  result: RouterForwardingResult
+  eventBuilder: ReturnType<typeof createEventBuilder>
+}) {
+  if (result.previousTtl !== undefined && result.datagram) {
+    eventBuilder.add('router-ttl-decremented', router.id, {
+      description: `${router.name} decremented TTL from ${result.previousTtl} to ${result.datagram.ttl}.`,
+      packetId: datagram.id,
+      details: {
+        previousTtl: result.previousTtl,
+        nextTtl: result.datagram.ttl,
+      },
+    })
+  }
+
+  eventBuilder.add('router-route-lookup-started', router.id, {
+    description: `${router.name} started Routing Table Lookup for ${datagram.dstIp}.`,
+    packetId: datagram.id,
+    details: { destinationIp: datagram.dstIp, routeCandidate },
+  })
+  if (result.selectedRoute) {
+    eventBuilder.add('router-route-selected', router.id, {
+      description: `${router.name} selected ${result.selectedRoute.destinationNetwork}/${result.selectedRoute.prefixLength} by Longest Prefix Match.`,
+      packetId: datagram.id,
+      details: { selectedRoute: result.selectedRoute },
+    })
+  }
+  if (result.nextHopIp && result.outInterface) {
+    eventBuilder.add('router-next-hop-selected', router.id, {
+      description: `${router.name} selected Next Hop ${result.nextHopIp} through ${result.outInterface.name}.`,
+      packetId: datagram.id,
+      details: {
+        nextHopIp: result.nextHopIp,
+        outInterfaceId: result.outInterface.id,
+      },
+    })
+  }
+}
+
+type RouterLayer2Resolution =
+  | { status: 'ok'; egressTargetInterface?: NetworkInterface }
+  | { status: 'dropped'; reason: PacketDropReason }
+
+function resolveRouterArpAndLayer2({
+  topology,
+  router,
+  result,
+  datagram,
+  eventBuilder,
+}: {
+  topology: TopologyState
+  router: RouterNode
+  result: RouterForwardingResult
+  datagram: IPv4Datagram
+  eventBuilder: ReturnType<typeof createEventBuilder>
+}): RouterLayer2Resolution {
+  if (!(result.nextHopIp && result.outInterface)) {
+    return { status: 'ok' }
+  }
+
+  const cachedArpEntry = findArpCacheEntry(router.arpCache, result.nextHopIp)
+  const arpResponder = interfaceByIp(topology, result.nextHopIp)
+
+  if (!arpResponder) {
+    eventBuilder.addDrop(datagram.id, router.id, 'No ARP Reply')
+
+    return { status: 'dropped', reason: 'No ARP Reply' }
+  }
+
+  const l2DropReason = packetDropBetweenInterfaces(
+    topology,
+    result.outInterface,
+    arpResponder.networkInterface,
+  )
+
+  if (cachedArpEntry) {
+    eventBuilder.add('arp-cache-hit', router.id, {
+      description: `${router.name} ARP Cache hit for ${result.nextHopIp}.`,
+      packetId: datagram.id,
+      details: {
+        ipAddress: cachedArpEntry.ipAddress,
+        macAddress: cachedArpEntry.macAddress,
+        interfaceId: cachedArpEntry.interfaceId,
+      },
+    })
+
+    if (l2DropReason) {
+      eventBuilder.addDrop(datagram.id, router.id, l2DropReason)
+
+      return { status: 'dropped', reason: l2DropReason }
+    }
+
+    return {
+      status: 'ok',
+      egressTargetInterface: arpResponder.networkInterface,
+    }
+  }
+
+  const arpRequestFrame = createArpRequestFrame({
+    frameId: `${datagram.id}-arp-request`,
+    senderIp: result.outInterface.ipAddress ?? '0.0.0.0',
+    senderMac: result.outInterface.macAddress,
+    targetIp: result.nextHopIp,
+  })
+
+  eventBuilder.add('arp-cache-miss', router.id, {
+    description: `${router.name} ARP Cache miss for ${result.nextHopIp}.`,
+    packetId: datagram.id,
+    details: { targetIp: result.nextHopIp },
+  })
+  eventBuilder.add('arp-request-sent', router.id, {
+    description: `${router.name} sent ARP Request for ${result.nextHopIp}.`,
+    packetId: datagram.id,
+    frameId: arpRequestFrame.id,
+    details: {
+      ethernetFrame: arpRequestFrame,
+      sourceInterfaceId: result.outInterface.id,
+      targetIp: result.nextHopIp,
+    },
+  })
+  addSwitchForwardingEvents({
+    topology,
+    segmentId: result.outInterface.segmentId,
+    sourceInterface: result.outInterface,
+    ethernetFrame: arpRequestFrame,
+    packetId: datagram.id,
+    eventBuilder,
+  })
+
+  if (l2DropReason) {
+    eventBuilder.addDrop(datagram.id, router.id, l2DropReason)
+
+    return { status: 'dropped', reason: l2DropReason }
+  }
+
+  addArpReplyAndCacheEvents({
+    topology,
+    requester: router,
+    requesterInterface: result.outInterface,
+    responder: arpResponder,
+    targetIp: result.nextHopIp,
+    packetId: datagram.id,
+    eventBuilder,
+  })
+
+  return {
+    status: 'ok',
+    egressTargetInterface: arpResponder.networkInterface,
+  }
 }
 
 function forwardFramesThroughRoutersInterleaved({
@@ -906,32 +986,18 @@ function forwardFramesThroughRoutersInterleaved({
       routerResult.outInterface.segmentId ===
         destinationInterface.networkInterface.segmentId
     ) {
-      for (const deliveredFrame of routedFrames) {
-        addForwardedFrameEvents({
+      deliveredDatagrams.push(
+        ...addDestinationDeliveryEvents({
           topology,
           actorNode: state.currentRouter,
           outInterface: routerResult.outInterface,
-          ethernetFrame: deliveredFrame,
-          eventBuilder,
-        })
-        eventBuilder.add('packet-delivered', destinationInterface.node.id, {
-          description: packetDeliveredDescription(
-            destinationInterface.node.name,
-            deliveredFrame,
-          ),
+          destinationInterface,
+          routedFrames,
           packetId,
-          frameId: deliveredFrame.id,
-          details: {
-            datagram: deliveredFrame.payload,
-            ethernetFrame: deliveredFrame,
-            sourceInterfaceId: routerResult.outInterface.id,
-            deliveredInterfaceId: destinationInterface.networkInterface.id,
-          },
-        })
-        deliveredDatagrams.push(deliveredFrame.payload as IPv4Datagram)
-        deliveredNode = destinationInterface.node
-      }
-
+          eventBuilder,
+        }),
+      )
+      deliveredNode = destinationInterface.node
       continue
     }
 
@@ -1170,7 +1236,7 @@ function pathMtuBetweenInterfaces(
     return DEFAULT_LINK_MTU
   }
 
-  const pathLinkIds = findSegmentPathLinkIds(
+  const pathLinkIds = findInterfacePathLinkIds(
     topology,
     sourceInterface.id,
     targetInterface.id,
@@ -1273,12 +1339,12 @@ function addSwitchForwardingEvents({
       : interfaceByMac(topology, destinationMac)
   const unicastPath =
     destinationInterface?.networkInterface.segmentId === segmentId
-      ? findSegmentPathInterfaceIds(
-          topology,
-          sourceInterface.id,
-          destinationInterface.networkInterface.id,
-          segmentId,
-        )
+      ? findInterfacePathInterfaceIds(
+        topology,
+        sourceInterface.id,
+        destinationInterface.networkInterface.id,
+        segmentId,
+      )
       : undefined
 
   for (const switchNode of topology.nodes.filter(
@@ -1292,9 +1358,13 @@ function addSwitchForwardingEvents({
       continue
     }
 
-    const ingressInterface =
-      ingressInterfaceForSwitchPath(segmentInterfaces, unicastPath) ??
-      closestSwitchInterface(topology, sourceInterface.id, segmentInterfaces, segmentId)
+    const ingressInterface = switchIngressInterface(
+      topology,
+      sourceInterface.id,
+      segmentInterfaces,
+      segmentId,
+      unicastPath,
+    )
 
     if (!ingressInterface) {
       continue
@@ -1309,99 +1379,49 @@ function addSwitchForwardingEvents({
       ethernetFrame,
     )
     eventBuilder.setSwitchMacTable(switchNode.id, decision.macAddressTable)
-
-    eventBuilder.add('switch-frame-received', switchNode.id, {
-      description: `${switchNode.name} received Ethernet Frame on ${ingressInterface.name}.`,
+    emitSwitchForwardingEvents({
+      actorNodeId: switchNode.id,
+      actorName: switchNode.name,
+      sourceInterfaceId: sourceInterface.id,
+      ingressInterfaceId: ingressInterface.id,
+      ingressInterfaceName: ingressInterface.name,
+      ethernetFrame,
       packetId,
-      frameId: ethernetFrame.id,
-      details: {
-        ethernetFrame,
-        ingressInterfaceId: ingressInterface.id,
-        sourceInterfaceId: sourceInterface.id,
-      },
+      destinationMac,
+      eventBuilder,
+      decision,
+      sourceMac,
     })
-    eventBuilder.add('switch-source-mac-learned', switchNode.id, {
-      description: `${switchNode.name} learned source MAC ${sourceMac}.`,
-      packetId,
-      frameId: ethernetFrame.id,
-      details: {
-        ethernetFrame,
-        ingressInterfaceId: ingressInterface.id,
-        sourceInterfaceId: sourceInterface.id,
-        macAddress: sourceMac,
-        portInterfaceId: ingressInterface.id,
-        macAddressTable: [decision.learnedEntry],
-      },
-    })
-
-    if (decision.kind === 'broadcast-flooded') {
-      eventBuilder.add('switch-broadcast-flooded', switchNode.id, {
-        description: `${switchNode.name} flooded broadcast Ethernet Frame.`,
-        packetId,
-        frameId: ethernetFrame.id,
-        details: {
-          ethernetFrame,
-          ingressInterfaceId: ingressInterface.id,
-          egressInterfaceIds: decision.egressInterfaceIds,
-        },
-      })
-    } else if (decision.kind === 'unknown-unicast-flooded') {
-      eventBuilder.add('switch-unknown-unicast-flooded', switchNode.id, {
-        description: `${switchNode.name} flooded unknown unicast Ethernet Frame.`,
-        packetId,
-        frameId: ethernetFrame.id,
-        details: {
-          ethernetFrame,
-          ingressInterfaceId: ingressInterface.id,
-          destinationMac,
-          egressInterfaceIds: decision.egressInterfaceIds,
-        },
-      })
-    } else {
-      eventBuilder.add('switch-known-unicast-forwarded', switchNode.id, {
-        description: `${switchNode.name} forwarded known unicast Ethernet Frame.`,
-        packetId,
-        frameId: ethernetFrame.id,
-        details: {
-          ethernetFrame,
-          ingressInterfaceId: ingressInterface.id,
-          destinationMac,
-          egressInterfaceIds: decision.egressInterfaceIds,
-        },
-      })
-    }
   }
 }
 
-function ingressInterfaceForSwitchPath(
-  segmentInterfaces: NetworkInterface[],
-  interfacePath: InterfaceId[] | undefined,
-): NetworkInterface | undefined {
-  if (!interfacePath) {
-    return undefined
-  }
-
-  return interfacePath
-    .map((interfaceId) =>
-      segmentInterfaces.find(
-        (networkInterface) => networkInterface.id === interfaceId,
-      ),
-    )
-    .find((networkInterface): networkInterface is NetworkInterface =>
-      Boolean(networkInterface),
-    )
-}
-
-function closestSwitchInterface(
+function switchIngressInterface(
   topology: TopologyState,
   sourceInterfaceId: InterfaceId,
   segmentInterfaces: NetworkInterface[],
   segmentId: SegmentId,
+  unicastPath: InterfaceId[] | undefined,
 ): NetworkInterface | undefined {
+  if (unicastPath) {
+    const ingressInterfaceFromPath = unicastPath
+      .map((interfaceId) =>
+        segmentInterfaces.find(
+          (networkInterface) => networkInterface.id === interfaceId,
+        ),
+      )
+      .find((networkInterface): networkInterface is NetworkInterface =>
+        Boolean(networkInterface),
+      )
+
+    if (ingressInterfaceFromPath) {
+      return ingressInterfaceFromPath
+    }
+  }
+
   return segmentInterfaces
     .map((networkInterface) => ({
       networkInterface,
-      path: findSegmentPathInterfaceIds(
+      path: findInterfacePathInterfaceIds(
         topology,
         sourceInterfaceId,
         networkInterface.id,
@@ -1417,6 +1437,197 @@ function closestSwitchInterface(
       } => Boolean(candidate.path),
     )
     .sort((a, b) => a.path.length - b.path.length)[0]?.networkInterface
+}
+
+function emitSwitchForwardingEvents({
+  actorNodeId,
+  actorName,
+  sourceInterfaceId,
+  ingressInterfaceId,
+  ingressInterfaceName,
+  ethernetFrame,
+  destinationMac,
+  packetId,
+  sourceMac,
+  eventBuilder,
+  decision,
+}: {
+  actorNodeId: string
+  actorName: string
+  sourceInterfaceId: string
+  ingressInterfaceId: string
+  ingressInterfaceName: string
+  ethernetFrame: EthernetFrame
+  destinationMac: string
+  packetId: string
+  sourceMac: string
+  eventBuilder: ReturnType<typeof createEventBuilder>
+  decision:
+    | {
+        kind: 'broadcast-flooded' | 'unknown-unicast-flooded' | 'known-unicast-forwarded'
+        egressInterfaceIds: string[]
+      }
+    & { learnedEntry: MacTableEntry }
+}) {
+  eventBuilder.add('switch-frame-received', actorNodeId, {
+    description: `${actorName} received Ethernet Frame on ${ingressInterfaceName}.`,
+    packetId,
+    frameId: ethernetFrame.id,
+    details: {
+      ethernetFrame,
+      ingressInterfaceId,
+      sourceInterfaceId,
+    },
+  })
+  eventBuilder.add('switch-source-mac-learned', actorNodeId, {
+    description: `${actorName} learned source MAC ${sourceMac}.`,
+    packetId,
+    frameId: ethernetFrame.id,
+    details: {
+      ethernetFrame,
+      ingressInterfaceId,
+      sourceInterfaceId,
+      macAddress: sourceMac,
+      portInterfaceId: ingressInterfaceId,
+      macAddressTable: [decision.learnedEntry],
+    },
+  })
+
+  if (decision.kind === 'broadcast-flooded') {
+    emitSwitchForwardingDecisionEvent({
+      actorNodeId,
+      ethernetFrame,
+      ingressInterfaceId,
+      packetId,
+      eventBuilder,
+      details: {
+        eventType: 'switch-broadcast-flooded',
+        description: `${actorName} flooded broadcast Ethernet Frame.`,
+        payload: { egressInterfaceIds: decision.egressInterfaceIds },
+      },
+    })
+    return
+  }
+
+  if (decision.kind === 'unknown-unicast-flooded') {
+    emitSwitchForwardingDecisionEvent({
+      actorNodeId,
+      ethernetFrame,
+      ingressInterfaceId,
+      packetId,
+      eventBuilder,
+      details: {
+        eventType: 'switch-unknown-unicast-flooded',
+        description: `${actorName} flooded unknown unicast Ethernet Frame.`,
+        payload: {
+          destinationMac,
+          egressInterfaceIds: decision.egressInterfaceIds,
+        },
+      },
+    })
+    return
+  }
+
+  emitSwitchForwardingDecisionEvent({
+    actorNodeId,
+    ethernetFrame,
+    ingressInterfaceId,
+    packetId,
+    eventBuilder,
+    details: {
+      eventType: 'switch-known-unicast-forwarded',
+      description: `${actorName} forwarded known unicast Ethernet Frame.`,
+      payload: {
+        destinationMac,
+        egressInterfaceIds: decision.egressInterfaceIds,
+      },
+    },
+  })
+}
+
+function addDestinationDeliveryEvents({
+  topology,
+  actorNode,
+  outInterface,
+  destinationInterface,
+  routedFrames,
+  packetId,
+  eventBuilder,
+}: {
+  topology: TopologyState
+  actorNode: RouterNode
+  outInterface: NetworkInterface
+  destinationInterface: LocatedInterface
+  routedFrames: EthernetFrame[]
+  packetId: string
+  eventBuilder: ReturnType<typeof createEventBuilder>
+}): IPv4Datagram[] {
+  const deliveredDatagrams: IPv4Datagram[] = []
+
+  for (const deliveredFrame of routedFrames) {
+    addForwardedFrameEvents({
+      topology,
+      actorNode,
+      outInterface,
+      ethernetFrame: deliveredFrame,
+      eventBuilder,
+    })
+    eventBuilder.add('packet-delivered', destinationInterface.node.id, {
+      description: packetDeliveredDescription(
+        destinationInterface.node.name,
+        deliveredFrame,
+      ),
+      packetId,
+      frameId: deliveredFrame.id,
+      details: {
+        datagram: deliveredFrame.payload,
+        ethernetFrame: deliveredFrame,
+        sourceInterfaceId: outInterface.id,
+        deliveredInterfaceId: destinationInterface.networkInterface.id,
+      },
+    })
+    deliveredDatagrams.push(deliveredFrame.payload as IPv4Datagram)
+  }
+
+  return deliveredDatagrams
+}
+
+function emitSwitchForwardingDecisionEvent({
+  actorNodeId,
+  ethernetFrame,
+  ingressInterfaceId,
+  packetId,
+  eventBuilder,
+  details,
+}: {
+  actorNodeId: string
+  ethernetFrame: EthernetFrame
+  ingressInterfaceId: string
+  packetId: string
+  eventBuilder: ReturnType<typeof createEventBuilder>
+  details: {
+    eventType:
+      | 'switch-broadcast-flooded'
+      | 'switch-unknown-unicast-flooded'
+      | 'switch-known-unicast-forwarded'
+    description: string
+    payload: {
+      destinationMac?: string
+      egressInterfaceIds: string[]
+    }
+  }
+}) {
+  eventBuilder.add(details.eventType, actorNodeId, {
+    description: details.description,
+    packetId,
+    frameId: ethernetFrame.id,
+    details: {
+      ethernetFrame,
+      ingressInterfaceId,
+      destinationMac: details.payload.destinationMac,
+      egressInterfaceIds: details.payload.egressInterfaceIds,
+    },
+  })
 }
 
 function packetDropBetweenInterfaces(
@@ -1435,7 +1646,7 @@ function packetDropBetweenInterfaces(
     return 'Network Unreachable'
   }
 
-  const pathLinkIds = findSegmentPathLinkIds(
+  const pathLinkIds = findInterfacePathLinkIds(
     topology,
     sourceInterface.id,
     targetInterface.id,
@@ -1455,174 +1666,6 @@ function packetDropBetweenInterfaces(
 
     if (networkLink.lossRate >= 1) {
       return 'Link Loss'
-    }
-  }
-
-  return undefined
-}
-
-function findSegmentPathLinkIds(
-  topology: TopologyState,
-  sourceInterfaceId: InterfaceId,
-  targetInterfaceId: InterfaceId,
-  segmentId: SegmentId,
-): LinkId[] | undefined {
-  return findSegmentPath(topology, sourceInterfaceId, targetInterfaceId, segmentId)
-    ?.pathLinkIds
-}
-
-function findSegmentPathInterfaceIds(
-  topology: TopologyState,
-  sourceInterfaceId: InterfaceId,
-  targetInterfaceId: InterfaceId,
-  segmentId: SegmentId,
-): InterfaceId[] | undefined {
-  return findSegmentPath(topology, sourceInterfaceId, targetInterfaceId, segmentId)
-    ?.pathInterfaceIds
-}
-
-function findSegmentPath(
-  topology: TopologyState,
-  sourceInterfaceId: InterfaceId,
-  targetInterfaceId: InterfaceId,
-  segmentId: SegmentId,
-): { pathInterfaceIds: InterfaceId[]; pathLinkIds: LinkId[] } | undefined {
-  const interfacesById = new Map<InterfaceId, NetworkInterface>()
-
-  for (const node of topology.nodes) {
-    for (const networkInterface of node.interfaces) {
-      interfacesById.set(networkInterface.id, networkInterface)
-    }
-  }
-
-  const sourceInterface = interfacesById.get(sourceInterfaceId)
-  const targetInterface = interfacesById.get(targetInterfaceId)
-
-  if (
-    !sourceInterface ||
-    !targetInterface ||
-    sourceInterface.segmentId !== segmentId ||
-    targetInterface.segmentId !== segmentId
-  ) {
-    return undefined
-  }
-
-  const adjacency = new Map<
-    InterfaceId,
-    Array<{ interfaceId: InterfaceId; linkId?: LinkId }>
-  >()
-  const addEdge = (
-    fromInterfaceId: InterfaceId,
-    toInterfaceId: InterfaceId,
-    linkId?: LinkId,
-  ) => {
-    adjacency.set(fromInterfaceId, [
-      ...(adjacency.get(fromInterfaceId) ?? []),
-      { interfaceId: toInterfaceId, linkId },
-    ])
-  }
-
-  for (const networkLink of topology.links) {
-    const endpointA = interfacesById.get(networkLink.endpointA.interfaceId)
-    const endpointB = interfacesById.get(networkLink.endpointB.interfaceId)
-
-    if (
-      endpointA?.segmentId === segmentId &&
-      endpointB?.segmentId === segmentId
-    ) {
-      addEdge(endpointA.id, endpointB.id, networkLink.id)
-      addEdge(endpointB.id, endpointA.id, networkLink.id)
-    }
-  }
-
-  for (const switchNode of topology.nodes.filter(
-    (node) => node.type === 'switch',
-  )) {
-    const segmentInterfaces = switchNode.interfaces.filter(
-      (networkInterface) => networkInterface.segmentId === segmentId,
-    )
-
-    for (const fromInterface of segmentInterfaces) {
-      for (const toInterface of segmentInterfaces) {
-        if (fromInterface.id !== toInterface.id) {
-          addEdge(fromInterface.id, toInterface.id)
-        }
-      }
-    }
-  }
-
-  const visited = new Set<InterfaceId>([sourceInterfaceId])
-  const queue: Array<{
-    interfaceId: InterfaceId
-    pathInterfaceIds: InterfaceId[]
-    pathLinkIds: LinkId[]
-  }> = [
-    {
-      interfaceId: sourceInterfaceId,
-      pathInterfaceIds: [sourceInterfaceId],
-      pathLinkIds: [],
-    },
-  ]
-
-  while (queue.length > 0) {
-    const current = queue.shift()
-
-    if (!current) {
-      break
-    }
-
-    if (current.interfaceId === targetInterfaceId) {
-      return {
-        pathInterfaceIds: current.pathInterfaceIds,
-        pathLinkIds: current.pathLinkIds,
-      }
-    }
-
-    for (const adjacent of adjacency.get(current.interfaceId) ?? []) {
-      if (visited.has(adjacent.interfaceId)) {
-        continue
-      }
-
-      visited.add(adjacent.interfaceId)
-      queue.push({
-        interfaceId: adjacent.interfaceId,
-        pathInterfaceIds: [...current.pathInterfaceIds, adjacent.interfaceId],
-        pathLinkIds: adjacent.linkId
-          ? [...current.pathLinkIds, adjacent.linkId]
-          : current.pathLinkIds,
-      })
-    }
-  }
-
-  return undefined
-}
-
-function interfaceByMac(
-  topology: TopologyState,
-  macAddress: string,
-): LocatedInterface | undefined {
-  const normalizedMacAddress = normalizeMac(macAddress)
-
-  for (const node of topology.nodes) {
-    for (const networkInterface of node.interfaces) {
-      if (normalizeMac(networkInterface.macAddress) === normalizedMacAddress) {
-        return { node, networkInterface }
-      }
-    }
-  }
-
-  return undefined
-}
-
-function interfaceByIp(
-  topology: TopologyState,
-  ipAddress: string,
-): LocatedInterface | undefined {
-  for (const node of topology.nodes) {
-    for (const networkInterface of node.interfaces) {
-      if (networkInterface.ipAddress === ipAddress) {
-        return { node, networkInterface }
-      }
     }
   }
 

@@ -18,6 +18,12 @@ import {
   ipv4TotalLength,
   protocolNumber,
 } from '../../domain/fragmentation'
+import { isRawPayload, textByteLength } from '../../domain/inspectionUtils'
+import {
+  isArpMessage,
+  isIcmpMessage,
+  isIpv4Datagram,
+} from '../../domain/packetGuards'
 
 export function LinkPacketDetails({
   topology,
@@ -171,42 +177,6 @@ function RawPayloadView({ payload }: { payload: RawPayload }) {
   )
 }
 
-function isArpMessage(value: unknown): value is ArpMessage {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'operation' in value &&
-    'senderIp' in value &&
-    'senderMac' in value &&
-    'targetIp' in value
-  )
-}
-
-function isIpv4Datagram(value: unknown): value is IPv4Datagram {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'srcIp' in value &&
-    'dstIp' in value &&
-    'ttl' in value &&
-    'protocol' in value &&
-    'payload' in value
-  )
-}
-
-function isIcmpMessage(value: unknown): value is IcmpMessage {
-  return typeof value === 'object' && value !== null && 'type' in value
-}
-
-function isRawPayload(value: unknown): value is RawPayload {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'data' in value &&
-    !('type' in value)
-  )
-}
-
 function etherTypeValue(etherType: EthernetFrame['etherType']): string {
   return etherType === 'ARP' ? '0x0806' : '0x0800'
 }
@@ -279,8 +249,4 @@ function icmpTypeNumber(type: IcmpMessage['type']): number {
   }
 
   return 3
-}
-
-function textByteLength(value: string): number {
-  return value.length
 }

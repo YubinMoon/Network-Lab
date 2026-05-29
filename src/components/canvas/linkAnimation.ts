@@ -1,19 +1,18 @@
 import type {
   InterfaceId,
   LinkId,
-  NetworkInterface,
   NetworkLink,
-  NetworkNode,
   SimulationEvent,
   TopologyState,
 } from '../../domain/types'
+import { findInterfacePathInterfaceIds } from '../../domain/interfacePath'
+import { interfaceByIp, type LocatedInterface } from '../../domain/networkLookup'
+import {
+  stringArrayDetail,
+  stringDetail,
+} from '../../domain/inspectionUtils'
 
 export type LinkAnimationDirection = 'source-to-target' | 'target-to-source'
-
-interface LocatedInterface {
-  node: NetworkNode
-  networkInterface: NetworkInterface
-}
 
 interface AnimationContext {
   interfacesById: Map<InterfaceId, LocatedInterface>
@@ -55,7 +54,7 @@ export function linkAnimationsForEvent(
       return
     }
 
-    const path = interfacePath(context, fromInterfaceId, toInterfaceId)
+    const path = interfacePath(topology, context, fromInterfaceId, toInterfaceId)
 
     for (let index = 1; index < path.length; index += 1) {
       addPhysicalMovement(path[index - 1], path[index])
@@ -139,7 +138,11 @@ export function linkAnimationsForEvent(
   if (event.type === 'arp-request-sent') {
     const sourceInterfaceId =
       stringDetail(event.details, 'sourceInterfaceId') ??
-      interfaceForActorAndTargetIp(topology, context, event.actorNodeId, stringDetail(event.details, 'targetIp'))
+      interfaceForActorAndTargetIp(
+        topology,
+        event.actorNodeId,
+        stringDetail(event.details, 'targetIp'),
+      )
 
     addOutboundMovement(sourceInterfaceId)
     return animations
@@ -180,76 +183,26 @@ function buildAnimationContext(topology: TopologyState): AnimationContext {
 }
 
 function interfacePath(
+  topology: TopologyState,
   context: AnimationContext,
   sourceInterfaceId: InterfaceId,
   targetInterfaceId: InterfaceId,
 ): InterfaceId[] {
-  const visited = new Set<InterfaceId>([sourceInterfaceId])
-  const queue: InterfaceId[][] = [[sourceInterfaceId]]
+  const source = context.interfacesById.get(sourceInterfaceId)?.networkInterface
+  const target = context.interfacesById.get(targetInterfaceId)?.networkInterface
 
-  while (queue.length > 0) {
-    const path = queue.shift()
-
-    if (!path) {
-      break
-    }
-
-    const currentInterfaceId = path[path.length - 1]
-
-    if (currentInterfaceId === targetInterfaceId) {
-      return path
-    }
-
-    for (const nextInterfaceId of adjacentInterfaceIds(context, currentInterfaceId)) {
-      if (visited.has(nextInterfaceId)) {
-        continue
-      }
-
-      visited.add(nextInterfaceId)
-      queue.push([...path, nextInterfaceId])
-    }
+  if (!source || !target || !source.segmentId || source.segmentId !== target.segmentId) {
+    return [sourceInterfaceId, targetInterfaceId]
   }
 
-  return [sourceInterfaceId, targetInterfaceId]
-}
-
-function adjacentInterfaceIds(
-  context: AnimationContext,
-  interfaceId: InterfaceId,
-): InterfaceId[] {
-  const adjacent = new Set<InterfaceId>()
-  const locatedInterface = context.interfacesById.get(interfaceId)
-
-  for (const link of context.linksByInterfaceId.get(interfaceId) ?? []) {
-    const peerInterfaceId = peerInterfaceIdForLink(link, interfaceId)
-
-    if (peerInterfaceId) {
-      adjacent.add(peerInterfaceId)
-    }
-  }
-
-  if (locatedInterface?.node.type === 'switch') {
-    for (const switchInterface of locatedInterface.node.interfaces) {
-      if (switchInterface.id !== interfaceId) {
-        adjacent.add(switchInterface.id)
-      }
-    }
-  }
-
-  return [...adjacent].filter((candidate) =>
-    sameSegment(context, interfaceId, candidate),
+  return (
+    findInterfacePathInterfaceIds(
+      topology,
+      sourceInterfaceId,
+      targetInterfaceId,
+      source.segmentId,
+    ) ?? [sourceInterfaceId, targetInterfaceId]
   )
-}
-
-function sameSegment(
-  context: AnimationContext,
-  aInterfaceId: InterfaceId,
-  bInterfaceId: InterfaceId,
-): boolean {
-  const a = context.interfacesById.get(aInterfaceId)?.networkInterface
-  const b = context.interfacesById.get(bInterfaceId)?.networkInterface
-
-  return Boolean(a?.segmentId && a.segmentId === b?.segmentId)
 }
 
 function linkBetweenInterfaces(
@@ -292,28 +245,13 @@ function peerInterfaceIdForLink(
   return undefined
 }
 
-function interfaceByIp(
-  context: AnimationContext,
-  ipAddress: string | undefined,
-): LocatedInterface | undefined {
-  if (!ipAddress) {
-    return undefined
-  }
-
-  return [...context.interfacesById.values()].find(
-    (locatedInterface) =>
-      locatedInterface.networkInterface.ipAddress === ipAddress,
-  )
-}
-
 function interfaceForActorAndTargetIp(
   topology: TopologyState,
-  context: AnimationContext,
   actorNodeId: string | undefined,
   targetIp: string | undefined,
 ): InterfaceId | undefined {
   const actorNode = topology.nodes.find((node) => node.id === actorNodeId)
-  const targetInterface = interfaceByIp(context, targetIp)?.networkInterface
+  const targetInterface = targetIp ? interfaceByIp(topology, targetIp)?.networkInterface : undefined
 
   if (!actorNode) {
     return undefined
@@ -327,24 +265,4 @@ function interfaceForActorAndTargetIp(
   }
 
   return actorNode.interfaces[0]?.id
-}
-
-function stringDetail(
-  details: Record<string, unknown> | undefined,
-  key: string,
-): string | undefined {
-  const value = details?.[key]
-
-  return typeof value === 'string' ? value : undefined
-}
-
-function stringArrayDetail(
-  details: Record<string, unknown> | undefined,
-  key: string,
-): string[] {
-  const value = details?.[key]
-
-  return Array.isArray(value) && value.every((item) => typeof item === 'string')
-    ? value
-    : []
 }

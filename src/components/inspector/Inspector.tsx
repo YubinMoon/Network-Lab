@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useLabStore } from '../../store/useLabStore'
 import { applySimulationTraceToTopology } from '../../domain/dynamicTables'
+import { stringDetail } from '../../domain/inspectionUtils'
 import type {
   NetworkInterface,
   NetworkLink,
@@ -265,6 +267,7 @@ function NodeInspector({
         <section>
           <h3>Routing Table</h3>
           <RoutingTableEditor
+            key={node.id}
             router={node}
             selectedRouteId={selectedRouteId}
             onAddRoute={onAddRouterRoute}
@@ -304,51 +307,140 @@ function RoutingTableEditor({
   ) => void
   onRemoveRoute: (routerId: string, routeId: RouteEntry['id']) => void
 }) {
+  const [isEditing, setIsEditing] = useState(false)
+
   return (
     <>
+      <div className="routing-table-actions">
+        <button type="button" onClick={() => setIsEditing((current) => !current)}>
+          {isEditing ? 'Done Editing' : 'Edit Routing Table'}
+        </button>
+      </div>
       {router.routingTable.length === 0 ? (
         <p>0 entries</p>
+      ) : isEditing ? (
+        <EditableRoutingTable
+          router={router}
+          selectedRouteId={selectedRouteId}
+          onUpdateRoute={onUpdateRoute}
+          onRemoveRoute={onRemoveRoute}
+        />
       ) : (
-        <div className="routing-table-wrapper">
-          <table className="routing-table-editor">
-            <thead>
-              <tr>
-                <th>Enabled</th>
-                <th>Destination</th>
-                <th>Next Hop</th>
-                <th>Out Interface</th>
-                <th>Metric</th>
-                <th>Type</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {router.routingTable.map((route) => (
-                <RoutingTableRow
-                  key={route.id}
-                  router={router}
-                  route={route}
-                  selected={route.id === selectedRouteId}
-                  onUpdateRoute={onUpdateRoute}
-                  onRemoveRoute={onRemoveRoute}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ReadOnlyRoutingTable
+          router={router}
+          selectedRouteId={selectedRouteId}
+        />
       )}
-      <button
-        type="button"
-        disabled={router.interfaces.length === 0}
-        onClick={() => onAddRoute(router.id)}
-      >
-        Add Manual Static
-      </button>
+      {isEditing ? (
+        <button
+          type="button"
+          disabled={router.interfaces.length === 0}
+          onClick={() => onAddRoute(router.id)}
+        >
+          Add Manual Static
+        </button>
+      ) : null}
     </>
   )
 }
 
-function RoutingTableRow({
+function ReadOnlyRoutingTable({
+  router,
+  selectedRouteId,
+}: {
+  router: RouterNode
+  selectedRouteId?: string
+}) {
+  return (
+    <div className="routing-table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Enabled</th>
+            <th>Destination</th>
+            <th>Next Hop</th>
+            <th>Out Interface</th>
+            <th>Metric</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          {router.routingTable.map((route) => (
+            <tr
+              className={route.id === selectedRouteId ? 'highlight-row' : undefined}
+              key={route.id}
+            >
+              <td>{route.enabled ? 'Enabled' : 'Disabled'}</td>
+              <td>{routeDestinationLabel(route)}</td>
+              <td>{route.nextHopIp ?? '-'}</td>
+              <td>{interfaceName(router, route.outInterfaceId)}</td>
+              <td>{route.metric ?? 1}</td>
+              <td>{routeTypeLabel(route.type)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function EditableRoutingTable({
+  router,
+  selectedRouteId,
+  onUpdateRoute,
+  onRemoveRoute,
+}: {
+  router: RouterNode
+  selectedRouteId?: string
+  onUpdateRoute: (
+    routerId: string,
+    routeId: RouteEntry['id'],
+    patch: Partial<
+      Pick<
+        RouteEntry,
+        | 'destinationNetwork'
+        | 'prefixLength'
+        | 'nextHopIp'
+        | 'outInterfaceId'
+        | 'metric'
+        | 'enabled'
+      >
+    >,
+  ) => void
+  onRemoveRoute: (routerId: string, routeId: RouteEntry['id']) => void
+}) {
+  return (
+    <div className="routing-table-wrapper">
+      <table className="routing-table-editor">
+        <thead>
+          <tr>
+            <th>Enabled</th>
+            <th>Destination</th>
+            <th>Next Hop</th>
+            <th>Out Interface</th>
+            <th>Metric</th>
+            <th>Type</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {router.routingTable.map((route) => (
+            <EditableRoutingTableRow
+              key={route.id}
+              router={router}
+              route={route}
+              selected={route.id === selectedRouteId}
+              onUpdateRoute={onUpdateRoute}
+              onRemoveRoute={onRemoveRoute}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function EditableRoutingTableRow({
   router,
   route,
   selected,
@@ -475,6 +567,18 @@ function RoutingTableRow({
         </button>
       </td>
     </tr>
+  )
+}
+
+function routeDestinationLabel(route: RouteEntry): string {
+  return `${route.destinationNetwork}/${route.prefixLength}`
+}
+
+function interfaceName(router: RouterNode, interfaceId: string): string {
+  return (
+    router.interfaces.find(
+      (networkInterface) => networkInterface.id === interfaceId,
+    )?.name ?? interfaceId
   )
 }
 
@@ -658,13 +762,4 @@ function nodeTypeLabel(type: string): string {
 
 function endpointName(nodeId: string, nodes: NetworkNode[]): string {
   return nodes.find((node) => node.id === nodeId)?.name ?? nodeId
-}
-
-function stringDetail(
-  details: Record<string, unknown> | undefined,
-  key: string,
-): string | undefined {
-  const value = details?.[key]
-
-  return typeof value === 'string' ? value : undefined
 }

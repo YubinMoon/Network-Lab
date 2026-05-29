@@ -39,6 +39,20 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Send' })).toHaveClass(
       'packet-send-button',
     )
+
+    const topBar = screen
+      .getByRole('heading', { name: 'IPv4 Network Visualization Lab' })
+      .closest('.top-bar')
+
+    expect(topBar).not.toBeNull()
+    expect(
+      within(topBar as HTMLElement).getByLabelText('Simulation Controls'),
+    ).toBeInTheDocument()
+    expect(
+      within(screen.getByLabelText('Palette')).queryByLabelText(
+        'Simulation Controls',
+      ),
+    ).not.toBeInTheDocument()
   })
 
   test('renders Event Log as the only bottom panel view', () => {
@@ -64,6 +78,60 @@ describe('App', () => {
     expect(
       within(panel).queryByRole('button', { name: 'Binary Match' }),
     ).not.toBeInTheDocument()
+  })
+
+  test('resizes left, bottom, and right workspace panels by dragging separators', () => {
+    render(<App />)
+
+    const workspace = screen.getByLabelText('Lab Workspace') as HTMLElement
+    const leftResizer = screen.getByRole('separator', {
+      name: 'Resize Left Panel',
+    })
+    const bottomResizer = screen.getByRole('separator', {
+      name: 'Resize Bottom Panel',
+    })
+    const rightResizer = screen.getByRole('separator', {
+      name: 'Resize Right Panel',
+    })
+
+    expect(workspace.style.getPropertyValue('--left-panel-width')).toBe('240px')
+    expect(workspace.style.getPropertyValue('--right-panel-width')).toBe('360px')
+    expect(workspace.style.getPropertyValue('--bottom-panel-height')).toBe(
+      '320px',
+    )
+
+    fireEvent.pointerDown(leftResizer, { clientX: 240, clientY: 300 })
+    fireEvent.pointerMove(window, { clientX: 300, clientY: 300 })
+    fireEvent.pointerUp(window)
+
+    expect(workspace.style.getPropertyValue('--left-panel-width')).toBe('300px')
+
+    fireEvent.pointerDown(bottomResizer, { clientX: 600, clientY: 600 })
+    fireEvent.pointerMove(window, { clientX: 600, clientY: 540 })
+    fireEvent.pointerUp(window)
+
+    expect(workspace.style.getPropertyValue('--bottom-panel-height')).toBe(
+      '380px',
+    )
+
+    fireEvent.pointerDown(rightResizer, { clientX: 1000, clientY: 300 })
+    fireEvent.pointerMove(window, { clientX: 930, clientY: 300 })
+    fireEvent.pointerUp(window)
+
+    expect(workspace.style.getPropertyValue('--right-panel-width')).toBe('430px')
+
+    fireEvent.keyDown(leftResizer, { key: 'ArrowLeft' })
+    fireEvent.keyDown(bottomResizer, { key: 'ArrowDown' })
+    fireEvent.keyDown(rightResizer, { key: 'ArrowLeft' })
+
+    expect(workspace.style.getPropertyValue('--left-panel-width')).toBe('276px')
+    expect(workspace.style.getPropertyValue('--bottom-panel-height')).toBe(
+      '356px',
+    )
+    expect(workspace.style.getPropertyValue('--right-panel-width')).toBe('454px')
+    expect(leftResizer).toHaveAttribute('aria-valuenow', '276')
+    expect(bottomResizer).toHaveAttribute('aria-valuenow', '356')
+    expect(rightResizer).toHaveAttribute('aria-valuenow', '454')
   })
 
   test('adds nodes to the topology store from the Palette', () => {
@@ -300,19 +368,30 @@ describe('App', () => {
     const controlButtons = within(
       screen.getByLabelText('Simulation Controls'),
     ).getAllByRole('button')
+    const topBar = initialPlayButton.closest('.top-bar')
 
     expect(initialPlayButton).toHaveClass('play')
+    expect(topBar).not.toBeNull()
     expect(controlButtons.slice(0, 2).map((button) => button.textContent)).toEqual(
       ['Play', 'Reset'],
     )
+    expect(controlButtons.map((button) => button.textContent)).toContain(
+      'Clear Log',
+    )
+    expect(
+      within(topBar as HTMLElement).getByLabelText('Speed'),
+    ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument()
 
     loadDefaultGatewayExample()
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    const traceBeforePlay = useLabStore.getState().simulationTrace
+
     fireEvent.click(screen.getByRole('button', { name: 'Play' }))
 
     const pauseButton = screen.getByRole('button', { name: 'Pause' })
 
+    expect(useLabStore.getState().simulationTrace).toBe(traceBeforePlay)
     expect(pauseButton).toHaveClass('pause')
     expect(useLabStore.getState().simulationStatus).toBe('running')
 
@@ -320,6 +399,36 @@ describe('App', () => {
 
     expect(screen.getByRole('button', { name: 'Play' })).toHaveClass('play')
     expect(useLabStore.getState().simulationStatus).toBe('paused')
+  })
+
+  test('creates the Event Log from the current Packet Generator input when Play starts idle', () => {
+    render(<App />)
+
+    loadDefaultGatewayExample()
+
+    act(() => {
+      useLabStore.getState().clearSimulationTrace()
+    })
+
+    expect(useLabStore.getState().simulationTrace).toBeNull()
+    expect(screen.getByText('Simulation idle.')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Payload'), {
+      target: { value: 'Play starts send' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+
+    const trace = useLabStore.getState().simulationTrace
+
+    expect(trace?.events.length).toBeGreaterThan(0)
+    expect(
+      trace?.events.some((event) => event.description.includes('Host A')),
+    ).toBe(true)
+    expect(useLabStore.getState().packetGeneratorInput.payload).toBe(
+      'Play starts send',
+    )
+    expect(useLabStore.getState().simulationStatus).toBe('running')
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument()
   })
 
   test('does not show endpoint MAC addresses for switch interfaces', () => {
@@ -359,11 +468,31 @@ describe('App', () => {
       'Routing Table',
     )
 
-    fireEvent.click(
-      within(routingSection).getByRole('button', {
+    expect(
+      within(routingSection).queryByRole('button', {
         name: 'Add Manual Static',
       }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(routingSection).queryByLabelText('Destination Network'),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      within(routingSection).getByRole('button', {
+        name: 'Edit Routing Table',
+      }),
     )
+
+    const addManualStaticButton = within(routingSection).getByRole('button', {
+      name: 'Add Manual Static',
+    })
+
+    expect(
+      within(routingSection).getByRole('button', { name: 'Done Editing' }),
+    ).toBeInTheDocument()
+    expect(addManualStaticButton).toBeEnabled()
+
+    fireEvent.click(addManualStaticButton)
     const destinationInputs =
       within(routingSection).getAllByLabelText('Destination Network')
     const prefixInputs = within(routingSection).getAllByLabelText('Prefix Length')
@@ -436,14 +565,39 @@ describe('App', () => {
 
     expect(generatedRoute).toBeTruthy()
 
-    fireEvent.change(
+    expect(
+      within(routingSection).getByText(
+        `${generatedRoute.destinationNetwork}/${generatedRoute.prefixLength}`,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(routingSection).queryByLabelText('Destination Network'),
+    ).not.toBeInTheDocument()
+    expect(
+      within(routingSection).queryByRole('button', { name: 'Delete' }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      within(routingSection).getByRole('button', {
+        name: 'Edit Routing Table',
+      }),
+    )
+
+    const generatedDestinationInput =
       within(routingSection).getAllByLabelText('Destination Network')[
         generatedRouteIndex
-      ],
-      {
-        target: { value: '10.99.0.0' },
-      },
-    )
+      ]
+    const generatedDeleteButton =
+      within(routingSection).getAllByRole('button', { name: 'Delete' })[
+        generatedRouteIndex
+      ]
+
+    expect(generatedDestinationInput).toBeEnabled()
+    expect(generatedDeleteButton).toBeEnabled()
+
+    fireEvent.change(generatedDestinationInput, {
+      target: { value: '10.99.0.0' },
+    })
     expect(
       within(routingSection).queryByLabelText('Route Type'),
     ).not.toBeInTheDocument()
@@ -455,11 +609,7 @@ describe('App', () => {
       }),
     )
 
-    fireEvent.click(
-      within(routingSection).getAllByRole('button', { name: 'Delete' })[
-        generatedRouteIndex
-      ],
-    )
+    fireEvent.click(generatedDeleteButton)
 
     expect(
       routerById('router-r1').routingTable.some(
