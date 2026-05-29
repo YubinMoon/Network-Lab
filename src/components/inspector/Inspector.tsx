@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useLabStore } from '../../store/useLabStore'
 import { applySimulationTraceToTopology } from '../../domain/dynamicTables'
+import { stringDetail } from '../../domain/inspectionUtils'
 import type {
   NetworkInterface,
   NetworkLink,
@@ -761,13 +762,4 @@ function nodeTypeLabel(type: string): string {
 
 function endpointName(nodeId: string, nodes: NetworkNode[]): string {
   return nodes.find((node) => node.id === nodeId)?.name ?? nodeId
-}
-
-function stringDetail(
-  details: Record<string, unknown> | undefined,
-  key: string,
-): string | undefined {
-  const value = details?.[key]
-
-  return typeof value === 'string' ? value : undefined
 }

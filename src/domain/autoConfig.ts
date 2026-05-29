@@ -3,6 +3,7 @@ import { generateMac } from './mac'
 import { applyRoutingTables } from './routing'
 import { applyNetworkSegments } from './segments'
 import { DEFAULT_LINK_MTU } from './types'
+import { collectInterfaceOwnerMap } from './interfaceIndex'
 import type {
   HostNode,
   InterfaceId,
@@ -34,7 +35,14 @@ export function applyAutoConfiguration(topology: TopologyState): TopologyState {
     return ensureMacAddresses(segmentedTopology)
   }
 
-  const owners = interfaceOwners(segmentedTopology.nodes)
+  const owners = collectInterfaceOwnerMap(
+    segmentedTopology.nodes,
+    (node, networkInterface, nodeIndex) => ({
+      node,
+      networkInterface,
+      nodeIndex,
+    }),
+  )
   const assignment = buildInterfaceAssignments(segmentedTopology.segments, owners)
   const gatewayBySegment = buildGateways(segmentedTopology.segments, assignment, owners)
   const nodes = segmentedTopology.nodes.map((node) =>
@@ -95,9 +103,7 @@ function ensureMacAddresses(topology: TopologyState): TopologyState {
       ...node,
       interfaces: node.interfaces.map((networkInterface) => ({
         ...networkInterface,
-        macAddress:
-          networkInterface.macAddress ||
-          generateMac(`${networkInterface.nodeId}:${networkInterface.name}`),
+        macAddress: ensureMacAddress(networkInterface),
       })),
     })),
   }
@@ -228,29 +234,18 @@ function configureInterface(
 
   return {
     ...networkInterface,
-    macAddress:
-      networkInterface.macAddress ||
-      generateMac(`${networkInterface.nodeId}:${networkInterface.name}`),
+    macAddress: ensureMacAddress(networkInterface),
     ipAddress: assigned.ipAddress,
     prefixLength: assigned.prefixLength,
     autoAssigned: true,
   }
 }
 
-function interfaceOwners(nodes: NetworkNode[]): Map<InterfaceId, InterfaceOwner> {
-  const owners = new Map<InterfaceId, InterfaceOwner>()
-
-  nodes.forEach((node, nodeIndex) => {
-    for (const networkInterface of node.interfaces) {
-      owners.set(networkInterface.id, {
-        node,
-        networkInterface,
-        nodeIndex,
-      })
-    }
-  })
-
-  return owners
+function ensureMacAddress(networkInterface: NetworkInterface): string {
+  return (
+    networkInterface.macAddress ||
+    generateMac(`${networkInterface.nodeId}:${networkInterface.name}`)
+  )
 }
 
 function sortedOwners(

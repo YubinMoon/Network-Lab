@@ -508,20 +508,20 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
 
   sendPacket: (input) => {
     const topology = topologyForCurrentEvent(get())
-    const simulationTrace = simulatePacketGeneratorInput(topology, input)
+    const simulation = runPacketSimulation(topology, input)
 
-    if (!simulationTrace) {
+    if (!simulation) {
       return
     }
 
     set({
-      topology: applySimulationTraceToTopology(topology, simulationTrace),
-      simulationTrace,
+      topology: applySimulationTraceToTopology(topology, simulation.trace),
+      simulationTrace: simulation.trace,
       simulationBaseTopology: topology,
       simulationStatus:
-        simulationTrace.events.length > 0 ? 'paused' : 'completed',
+        simulation.trace.events.length > 0 ? 'paused' : 'completed',
       currentEventIndex: 0,
-      packetGeneratorInput: { ...input },
+      packetGeneratorInput: { ...simulation.normalizedInput },
     })
   },
 
@@ -534,36 +534,26 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       }
 
       const topology = topologyForCurrentEvent(state)
-      const packetGeneratorInput = normalizePacketGeneratorInput(
+      const simulation = runPacketSimulation(
         topology,
         state.packetGeneratorInput,
+        { normalizeInput: true },
       )
 
-      if (!packetGeneratorInput) {
-        return {
-          simulationStatus: 'idle',
-        }
-      }
-
-      const simulationTrace = simulatePacketGeneratorInput(
-        topology,
-        packetGeneratorInput,
-      )
-
-      if (!simulationTrace) {
+      if (!simulation) {
         return {
           simulationStatus: 'idle',
         }
       }
 
       return {
-        topology: applySimulationTraceToTopology(topology, simulationTrace),
-        simulationTrace,
+        topology: applySimulationTraceToTopology(topology, simulation.trace),
+        simulationTrace: simulation.trace,
         simulationBaseTopology: topology,
         simulationStatus:
-          simulationTrace.events.length > 0 ? 'running' : 'completed',
+          simulation.trace.events.length > 0 ? 'running' : 'completed',
         currentEventIndex: 0,
-        packetGeneratorInput,
+        packetGeneratorInput: simulation.normalizedInput,
       }
     })
   },
@@ -957,17 +947,6 @@ function linksSameNodes(
   )
 }
 
-function hostIpAddress(
-  topology: TopologyState,
-  hostId: NodeId | undefined,
-): string | undefined {
-  const host = topology.nodes.find(
-    (node): node is HostNode => node.type === 'host' && node.id === hostId,
-  )
-
-  return host?.interfaces[0]?.ipAddress
-}
-
 function normalizePacketGeneratorInput(
   topology: TopologyState,
   input: PacketGeneratorInput,
@@ -1002,7 +981,10 @@ function simulatePacketGeneratorInput(
 ): PacketTrace | null {
   const destinationIp =
     input.destinationMode === 'host'
-      ? hostIpAddress(topology, input.targetHostId)
+      ? topology.nodes.find(
+          (node): node is HostNode =>
+            node.type === 'host' && node.id === input.targetHostId,
+        )?.interfaces[0]?.ipAddress
       : (input.destinationIp ?? '').trim()
 
   if (!input.sourceHostId || !destinationIp) {
@@ -1018,4 +1000,26 @@ function simulatePacketGeneratorInput(
     packetCount: input.packetCount,
     intervalMs: input.intervalMs,
   })
+}
+
+function runPacketSimulation(
+  topology: TopologyState,
+  input: PacketGeneratorInput,
+  options: { normalizeInput?: boolean } = {},
+): { trace: PacketTrace; normalizedInput: PacketGeneratorInput } | null {
+  const normalizedInput = options.normalizeInput
+    ? normalizePacketGeneratorInput(topology, input)
+    : input
+
+  if (!normalizedInput) {
+    return null
+  }
+
+  const trace = simulatePacketGeneratorInput(topology, normalizedInput)
+
+  if (!trace) {
+    return null
+  }
+
+  return { trace, normalizedInput }
 }

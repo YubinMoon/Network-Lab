@@ -5,6 +5,7 @@ import type {
   SimulationEvent,
   TopologyState,
 } from '../../domain/types'
+import { isEthernetFrame } from '../../domain/packetGuards'
 
 export interface LinkPacketSnapshot {
   frame: EthernetFrame
@@ -36,16 +37,4 @@ function ethernetFrameDetail(
   const value = details?.ethernetFrame
 
   return isEthernetFrame(value) ? value : undefined
-}
-
-function isEthernetFrame(value: unknown): value is EthernetFrame {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'id' in value &&
-    'srcMac' in value &&
-    'dstMac' in value &&
-    'etherType' in value &&
-    'payload' in value
-  )
 }

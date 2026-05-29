@@ -128,14 +128,6 @@ export const LAN_ALLOCATION_POLICY: IpAllocationPolicy = {
   hostStartOffset: 10,
 }
 
-export interface HostViewModel {
-  nodeId: NodeId
-  name: string
-  interface: NetworkInterface
-  defaultGatewayIp?: string
-  arpCache: ArpCacheEntry[]
-}
-
 export interface MacTableEntry {
   macAddress: string
   portInterfaceId: InterfaceId
@@ -242,32 +234,7 @@ export interface PacketGeneratorInput {
   payload?: string
 }
 
-export interface SimulationState {
-  status: SimulationStatus
-  currentTimeMs: number
-  speed: number
-  eventQueue: SimulationEvent[]
-  executedEvents: SimulationEvent[]
-  activeFrames: ActiveFrame[]
-  activePackets: ActivePacket[]
-  packetTraces: PacketTrace[]
-}
-
 export type SimulationStatus = 'idle' | 'running' | 'paused' | 'completed'
-
-export interface ActiveFrame {
-  frame: EthernetFrame
-  currentInterfaceId?: InterfaceId
-  currentLinkId?: LinkId
-  state: 'queued' | 'moving' | 'processing' | 'delivered' | 'dropped'
-}
-
-export interface ActivePacket {
-  datagram: IPv4Datagram
-  state: 'created' | 'in-transit' | 'delivered' | 'dropped'
-  currentNodeId?: NodeId
-  currentInterfaceId?: InterfaceId
-}
 
 export type SimulationEventType =
   | 'host-subnet-check'

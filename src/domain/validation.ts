@@ -8,28 +8,6 @@ import type {
   ValidationIssue,
 } from './types'
 
-export type FieldValidationResult =
-  | { valid: true }
-  | { valid: false; message: string }
-
-export function validateIpv4Address(ip: string): FieldValidationResult {
-  return isValidIpv4(ip)
-    ? { valid: true }
-    : { valid: false, message: 'Invalid IP Configuration' }
-}
-
-export function validatePrefixLength(prefix: number): FieldValidationResult {
-  return isValidPrefixLength(prefix)
-    ? { valid: true }
-    : { valid: false, message: 'Invalid IP Configuration' }
-}
-
-export function validateMacAddress(mac: string): FieldValidationResult {
-  return isValidMac(mac)
-    ? { valid: true }
-    : { valid: false, message: 'Invalid MAC Address' }
-}
-
 export function validateTopology(topology: TopologyState): ValidationIssue[] {
   return [
     ...validateInterfaces(topology),
@@ -88,7 +66,7 @@ function validateInterfaces(topology: TopologyState): ValidationIssue[] {
       if (
         hostInterface?.ipAddress &&
         hostInterface.prefixLength !== undefined &&
-        !sameSubnet(
+        !ipMatchesPrefix(
           hostInterface.ipAddress,
           node.defaultGatewayIp,
           hostInterface.prefixLength,
@@ -281,8 +259,4 @@ function unsupportedSwitchLoopLinkIds(topology: TopologyState): LinkId[] {
   }
 
   return loopLinkIds
-}
-
-function sameSubnet(a: string, b: string, prefixLength: number): boolean {
-  return ipMatchesPrefix(b, a, prefixLength)
 }

@@ -11,6 +11,12 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## Completed Work
 
+- 2026-05-29: Completed code-duplication cleanup and function decomposition across domain simulation path lookup and network owner indexing logic.
+  - Added shared interface lookup helper module (`networkLookup`) and replaced duplicated interface/IP-MAC search in simulation.
+  - Added shared interface-owner indexing helper (`collectInterfaceOwnerMap`) to remove duplicated ownership mapping in `autoConfig` and `segments`.
+  - Split large router forwarding function into smaller route/input/ARP helpers and merged small switch ingress helpers, plus extracted shared destination-delivery event emitter.
+  - Removed remaining duplicate `interfaceByIp` lookup in canvas link animation and switched to shared `networkLookup` utility.
+  - Consolidated IP/MAC interface lookup logic in `networkLookup` into a single internal iterator helper.
 - 2026-05-29: Completed removal of preseeded `Manual Static` routes from the `Redundant Router Mesh` example while preserving generated `Auto Static` forwarding and delivery.
 - 2026-05-29: Completed resizable left Palette, bottom Event Log, and right Inspector panels with pointer and keyboard resizing, with regression tests and browser verification.
 - 2026-05-29: Completed `Play` auto-generating the current Packet Generator trace when no Event Log exists while preserving play-only behavior for existing Event Logs, with regression tests and browser verification.
@@ -82,7 +88,7 @@ This file tracks planned work and completed work for the IPv4 Network Visualizat
 
 ## In Progress
 
-- None.
+- [x] Refactor duplicated packet guard/path utilities into shared domain helpers, remove tiny duplicate helpers (`hostIpAddress`, `sameSubnet`), and split large path/selection logic helpers in simulation/link animation code.
 
 ## Planned Work
 

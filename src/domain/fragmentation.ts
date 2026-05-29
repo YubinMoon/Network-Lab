@@ -1,4 +1,5 @@
-import { DEFAULT_LINK_MTU, type IPv4Datagram, type RawPayload } from './types'
+import { DEFAULT_LINK_MTU, type IPv4Datagram } from './types'
+import { isRawPayload, textByteLength } from './inspectionUtils'
 
 export const IPV4_HEADER_LENGTH_BYTES = 20
 export const ICMP_HEADER_LENGTH_BYTES = 8
@@ -171,10 +172,6 @@ function fragmentPayload(
   }
 }
 
-function isRawPayload(value: IPv4Datagram['payload']): value is RawPayload {
-  return 'data' in value && !('type' in value)
-}
-
 function identificationWord(identification: string): number {
   let hash = 0
 
@@ -203,8 +200,4 @@ function onesComplementChecksum(words: number[]): number {
   }
 
   return (~sum) & 0xffff
-}
-
-function textByteLength(value: string): number {
-  return value.length
 }

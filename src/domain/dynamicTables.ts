@@ -1,5 +1,6 @@
 import { updateArpCache } from './arp'
 import { learnSourceMac } from './l2'
+import { stringDetail } from './inspectionUtils'
 import type { PacketTrace, TopologyState } from './types'
 
 export function applySimulationTraceToTopology(
@@ -74,13 +75,4 @@ export function applySimulationTraceToTopology(
       }
     }),
   }
-}
-
-function stringDetail(
-  details: Record<string, unknown> | undefined,
-  key: string,
-): string | undefined {
-  const value = details?.[key]
-
-  return typeof value === 'string' ? value : undefined
 }

@@ -80,35 +80,12 @@ function App() {
       const startSizes = panelSizes
 
       const handlePointerMove = (moveEvent: PointerEvent) => {
-        setPanelSizes((currentSizes) => {
-          if (target === 'left') {
-            return {
-              ...currentSizes,
-              left: clampPanelSize(
-                'left',
-                startSizes.left + moveEvent.clientX - startX,
-              ),
-            }
-          }
+        const deltaX = moveEvent.clientX - startX
+        const deltaY = moveEvent.clientY - startY
 
-          if (target === 'right') {
-            return {
-              ...currentSizes,
-              right: clampPanelSize(
-                'right',
-                startSizes.right - (moveEvent.clientX - startX),
-              ),
-            }
-          }
-
-          return {
-            ...currentSizes,
-            bottom: clampPanelSize(
-              'bottom',
-              startSizes.bottom - (moveEvent.clientY - startY),
-            ),
-          }
-        })
+        setPanelSizes((currentSizes) =>
+          resizePanelFromPointer(target, currentSizes, startSizes, deltaX, deltaY),
+        )
       }
 
       const stopResize = () => {
@@ -122,10 +99,7 @@ function App() {
   const resizePanelWithKeyboard =
     (target: PanelResizeTarget) =>
     (event: ReactKeyboardEvent<HTMLDivElement>) => {
-      const keyDeltas: Record<string, number> =
-        target === 'bottom'
-          ? { ArrowUp: PANEL_KEYBOARD_STEP, ArrowDown: -PANEL_KEYBOARD_STEP }
-          : { ArrowLeft: -PANEL_KEYBOARD_STEP, ArrowRight: PANEL_KEYBOARD_STEP }
+      const keyDeltas = keyboardResizeDeltaMap(target)
       const delta = keyDeltas[event.key]
 
       if (delta === undefined) {
@@ -237,6 +211,41 @@ function clampPanelSize(target: PanelResizeTarget, size: number): number {
   const limits = PANEL_LIMITS[target]
 
   return Math.min(limits.max, Math.max(limits.min, Math.round(size)))
+}
+
+function resizePanelFromPointer(
+  target: PanelResizeTarget,
+  currentSizes: PanelSizes,
+  startSizes: PanelSizes,
+  deltaX: number,
+  deltaY: number,
+): PanelSizes {
+  if (target === 'left') {
+    return {
+      ...currentSizes,
+      left: clampPanelSize('left', startSizes.left + deltaX),
+    }
+  }
+
+  if (target === 'right') {
+    return {
+      ...currentSizes,
+      right: clampPanelSize('right', startSizes.right - deltaX),
+    }
+  }
+
+  return {
+    ...currentSizes,
+    bottom: clampPanelSize('bottom', startSizes.bottom - deltaY),
+  }
+}
+
+function keyboardResizeDeltaMap(
+  target: PanelResizeTarget,
+): Record<string, number> {
+  return target === 'bottom'
+    ? { ArrowUp: PANEL_KEYBOARD_STEP, ArrowDown: -PANEL_KEYBOARD_STEP }
+    : { ArrowLeft: -PANEL_KEYBOARD_STEP, ArrowRight: PANEL_KEYBOARD_STEP }
 }
 
 export default App

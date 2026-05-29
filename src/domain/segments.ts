@@ -9,6 +9,7 @@ import {
   type TopologyState,
 } from './types'
 import { UndirectedGraph } from './graph'
+import { collectInterfaceOwnerMap } from './interfaceIndex'
 
 interface SegmentDraft {
   memberInterfaceIds: InterfaceId[]
@@ -25,7 +26,10 @@ export function detectNetworkSegments(
   links: NetworkLink[],
   previousSegments: NetworkSegment[] = [],
 ): NetworkSegment[] {
-  const owners = interfaceOwners(nodes)
+  const owners = collectInterfaceOwnerMap(nodes, (node, _networkInterface, nodeIndex) => ({
+    node,
+    nodeIndex,
+  }))
   const graph = new UndirectedGraph<InterfaceId>()
 
   for (const interfaceId of owners.keys()) {
@@ -81,18 +85,6 @@ export function applyNetworkSegments(topology: TopologyState): TopologyState {
       })),
     })),
   }
-}
-
-function interfaceOwners(nodes: NetworkNode[]): Map<InterfaceId, InterfaceOwner> {
-  const owners = new Map<InterfaceId, InterfaceOwner>()
-
-  nodes.forEach((node, nodeIndex) => {
-    for (const networkInterface of node.interfaces) {
-      owners.set(networkInterface.id, { node, nodeIndex })
-    }
-  })
-
-  return owners
 }
 
 function createSegmentDraft(
