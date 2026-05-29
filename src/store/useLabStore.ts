@@ -50,7 +50,6 @@ interface LabStoreState {
   simulationSpeed: number
   canvasFitRequestId: number
   packetGeneratorInput: PacketGeneratorInput
-  packetGeneratorInputRevision: number
   lastExportJson: string
   lastShareUrl: string
   addNode: (type: NodeType) => void
@@ -73,6 +72,7 @@ interface LabStoreState {
   clearTopology: () => void
   resetDynamicTables: () => void
   clearSimulationTrace: () => void
+  updatePacketGeneratorInput: (patch: Partial<PacketGeneratorInput>) => void
   sendPacket: (input: PacketGeneratorInput) => void
   playSimulation: () => void
   pauseSimulation: () => void
@@ -155,7 +155,6 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   simulationSpeed: 1,
   canvasFitRequestId: 0,
   packetGeneratorInput: defaultPacketGeneratorInput(),
-  packetGeneratorInputRevision: 0,
   lastExportJson: '',
   lastShareUrl: '',
 
@@ -453,7 +452,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
   },
 
   clearTopology: () => {
-    set((state) => ({
+    set({
       topology: emptyTopology(),
       selectedObject: null,
       simulationTrace: null,
@@ -461,8 +460,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       simulationStatus: 'idle',
       currentEventIndex: 0,
       packetGeneratorInput: defaultPacketGeneratorInput(),
-      packetGeneratorInputRevision: state.packetGeneratorInputRevision + 1,
-    }))
+    })
   },
 
   resetDynamicTables: () => {
@@ -499,26 +497,22 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
     }))
   },
 
+  updatePacketGeneratorInput: (patch) => {
+    set((state) => ({
+      packetGeneratorInput: {
+        ...state.packetGeneratorInput,
+        ...patch,
+      },
+    }))
+  },
+
   sendPacket: (input) => {
     const topology = topologyForCurrentEvent(get())
-    const destinationIp =
-      input.destinationMode === 'host'
-        ? hostIpAddress(topology, input.targetHostId)
-        : input.destinationIp
+    const simulationTrace = simulatePacketGeneratorInput(topology, input)
 
-    if (!destinationIp) {
+    if (!simulationTrace) {
       return
     }
-
-    const simulationTrace = simulateIpv4PacketBatch(topology, {
-      sourceHostId: input.sourceHostId,
-      destinationIp,
-      ttl: input.ttl,
-      packetType: input.packetType,
-      payload: input.payload,
-      packetCount: input.packetCount,
-      intervalMs: input.intervalMs,
-    })
 
     set({
       topology: applySimulationTraceToTopology(topology, simulationTrace),
@@ -527,13 +521,51 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       simulationStatus:
         simulationTrace.events.length > 0 ? 'paused' : 'completed',
       currentEventIndex: 0,
+      packetGeneratorInput: { ...input },
     })
   },
 
   playSimulation: () => {
-    set((state) => ({
-      simulationStatus: state.simulationTrace ? 'running' : 'idle',
-    }))
+    set((state) => {
+      if (state.simulationTrace) {
+        return {
+          simulationStatus: 'running',
+        }
+      }
+
+      const topology = topologyForCurrentEvent(state)
+      const packetGeneratorInput = normalizePacketGeneratorInput(
+        topology,
+        state.packetGeneratorInput,
+      )
+
+      if (!packetGeneratorInput) {
+        return {
+          simulationStatus: 'idle',
+        }
+      }
+
+      const simulationTrace = simulatePacketGeneratorInput(
+        topology,
+        packetGeneratorInput,
+      )
+
+      if (!simulationTrace) {
+        return {
+          simulationStatus: 'idle',
+        }
+      }
+
+      return {
+        topology: applySimulationTraceToTopology(topology, simulationTrace),
+        simulationTrace,
+        simulationBaseTopology: topology,
+        simulationStatus:
+          simulationTrace.events.length > 0 ? 'running' : 'completed',
+        currentEventIndex: 0,
+        packetGeneratorInput,
+      }
+    })
   },
 
   pauseSimulation: () => {
@@ -653,21 +685,7 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
 
   loadExampleTopology: (example) => {
     const topology = applyAutoConfiguration(example.topology)
-    const destinationIp =
-      example.packet.destinationMode === 'host'
-        ? hostIpAddress(topology, example.packet.targetHostId)
-        : example.packet.destinationIp
-    const simulationTrace = destinationIp
-      ? simulateIpv4PacketBatch(topology, {
-          sourceHostId: example.packet.sourceHostId,
-          destinationIp,
-          ttl: example.packet.ttl,
-          packetType: example.packet.packetType,
-          payload: example.packet.payload,
-          packetCount: example.packet.packetCount,
-          intervalMs: example.packet.intervalMs,
-        })
-      : null
+    const simulationTrace = simulatePacketGeneratorInput(topology, example.packet)
 
     set((state) => ({
       topology: simulationTrace
@@ -680,7 +698,6 @@ export const useLabStore = create<LabStoreState>((set, get) => ({
       currentEventIndex: 0,
       canvasFitRequestId: state.canvasFitRequestId + 1,
       packetGeneratorInput: { ...example.packet },
-      packetGeneratorInputRevision: state.packetGeneratorInputRevision + 1,
     }))
   },
 }))
@@ -949,4 +966,56 @@ function hostIpAddress(
   )
 
   return host?.interfaces[0]?.ipAddress
+}
+
+function normalizePacketGeneratorInput(
+  topology: TopologyState,
+  input: PacketGeneratorInput,
+): PacketGeneratorInput | null {
+  const hosts = topology.nodes.filter(
+    (node): node is HostNode => node.type === 'host',
+  )
+  const sourceHostId = hosts.some((host) => host.id === input.sourceHostId)
+    ? input.sourceHostId
+    : hosts[0]?.id ?? ''
+  const targetHostId = hosts.some((host) => host.id === input.targetHostId)
+    ? input.targetHostId
+    : hosts[1]?.id ?? hosts[0]?.id ?? ''
+  const normalizedInput = {
+    ...input,
+    sourceHostId,
+    targetHostId,
+    destinationIp: input.destinationIp ?? '',
+    intervalMs: topology.settings.defaultPacketIntervalMs,
+  }
+  const hasDestination =
+    normalizedInput.destinationMode === 'host'
+      ? Boolean(normalizedInput.targetHostId)
+      : Boolean(normalizedInput.destinationIp.trim())
+
+  return normalizedInput.sourceHostId && hasDestination ? normalizedInput : null
+}
+
+function simulatePacketGeneratorInput(
+  topology: TopologyState,
+  input: PacketGeneratorInput,
+): PacketTrace | null {
+  const destinationIp =
+    input.destinationMode === 'host'
+      ? hostIpAddress(topology, input.targetHostId)
+      : (input.destinationIp ?? '').trim()
+
+  if (!input.sourceHostId || !destinationIp) {
+    return null
+  }
+
+  return simulateIpv4PacketBatch(topology, {
+    sourceHostId: input.sourceHostId,
+    destinationIp,
+    ttl: input.ttl,
+    packetType: input.packetType,
+    payload: input.payload,
+    packetCount: input.packetCount,
+    intervalMs: input.intervalMs,
+  })
 }

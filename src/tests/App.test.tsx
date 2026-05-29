@@ -331,10 +331,13 @@ describe('App', () => {
 
     loadDefaultGatewayExample()
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    const traceBeforePlay = useLabStore.getState().simulationTrace
+
     fireEvent.click(screen.getByRole('button', { name: 'Play' }))
 
     const pauseButton = screen.getByRole('button', { name: 'Pause' })
 
+    expect(useLabStore.getState().simulationTrace).toBe(traceBeforePlay)
     expect(pauseButton).toHaveClass('pause')
     expect(useLabStore.getState().simulationStatus).toBe('running')
 
@@ -342,6 +345,36 @@ describe('App', () => {
 
     expect(screen.getByRole('button', { name: 'Play' })).toHaveClass('play')
     expect(useLabStore.getState().simulationStatus).toBe('paused')
+  })
+
+  test('creates the Event Log from the current Packet Generator input when Play starts idle', () => {
+    render(<App />)
+
+    loadDefaultGatewayExample()
+
+    act(() => {
+      useLabStore.getState().clearSimulationTrace()
+    })
+
+    expect(useLabStore.getState().simulationTrace).toBeNull()
+    expect(screen.getByText('Simulation idle.')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Payload'), {
+      target: { value: 'Play starts send' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }))
+
+    const trace = useLabStore.getState().simulationTrace
+
+    expect(trace?.events.length).toBeGreaterThan(0)
+    expect(
+      trace?.events.some((event) => event.description.includes('Host A')),
+    ).toBe(true)
+    expect(useLabStore.getState().packetGeneratorInput.payload).toBe(
+      'Play starts send',
+    )
+    expect(useLabStore.getState().simulationStatus).toBe('running')
+    expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument()
   })
 
   test('does not show endpoint MAC addresses for switch interfaces', () => {
