@@ -596,6 +596,30 @@ dd {
   background: #ff9494;
 }
 
+.simulation-reset-button {
+  border-color: transparent;
+  background: var(--warning);
+  color: #211507;
+  font-weight: 750;
+}
+
+.simulation-reset-button:hover {
+  border-color: var(--warning);
+  background: #ffd98a;
+}
+
+.simulation-clear-button {
+  border-color: transparent;
+  background: var(--danger);
+  color: #210b0d;
+  font-weight: 750;
+}
+
+.simulation-clear-button:hover {
+  border-color: var(--danger);
+  background: #ff9494;
+}
+
 .top-bar .simulation-controls {
   flex: 1 1 620px;
   justify-content: flex-end;

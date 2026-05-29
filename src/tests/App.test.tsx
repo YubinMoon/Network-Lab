@@ -375,8 +375,14 @@ describe('App', () => {
     expect(controlButtons.slice(0, 2).map((button) => button.textContent)).toEqual(
       ['Play', 'Reset'],
     )
-    expect(controlButtons.map((button) => button.textContent)).toContain(
-      'Clear Log',
+    expect(screen.getByRole('button', { name: 'Reset' })).toHaveClass(
+      'simulation-reset-button',
+    )
+    expect(
+      screen.getByRole('button', { name: 'Reset Dynamic Tables' }),
+    ).toHaveClass('simulation-reset-button')
+    expect(screen.getByRole('button', { name: 'Clear Log' })).toHaveClass(
+      'simulation-clear-button',
     )
     expect(
       within(topBar as HTMLElement).getByLabelText('Speed'),
