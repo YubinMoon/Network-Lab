@@ -80,6 +80,60 @@ describe('App', () => {
     ).not.toBeInTheDocument()
   })
 
+  test('resizes left, bottom, and right workspace panels by dragging separators', () => {
+    render(<App />)
+
+    const workspace = screen.getByLabelText('Lab Workspace') as HTMLElement
+    const leftResizer = screen.getByRole('separator', {
+      name: 'Resize Left Panel',
+    })
+    const bottomResizer = screen.getByRole('separator', {
+      name: 'Resize Bottom Panel',
+    })
+    const rightResizer = screen.getByRole('separator', {
+      name: 'Resize Right Panel',
+    })
+
+    expect(workspace.style.getPropertyValue('--left-panel-width')).toBe('240px')
+    expect(workspace.style.getPropertyValue('--right-panel-width')).toBe('360px')
+    expect(workspace.style.getPropertyValue('--bottom-panel-height')).toBe(
+      '320px',
+    )
+
+    fireEvent.pointerDown(leftResizer, { clientX: 240, clientY: 300 })
+    fireEvent.pointerMove(window, { clientX: 300, clientY: 300 })
+    fireEvent.pointerUp(window)
+
+    expect(workspace.style.getPropertyValue('--left-panel-width')).toBe('300px')
+
+    fireEvent.pointerDown(bottomResizer, { clientX: 600, clientY: 600 })
+    fireEvent.pointerMove(window, { clientX: 600, clientY: 540 })
+    fireEvent.pointerUp(window)
+
+    expect(workspace.style.getPropertyValue('--bottom-panel-height')).toBe(
+      '380px',
+    )
+
+    fireEvent.pointerDown(rightResizer, { clientX: 1000, clientY: 300 })
+    fireEvent.pointerMove(window, { clientX: 930, clientY: 300 })
+    fireEvent.pointerUp(window)
+
+    expect(workspace.style.getPropertyValue('--right-panel-width')).toBe('430px')
+
+    fireEvent.keyDown(leftResizer, { key: 'ArrowLeft' })
+    fireEvent.keyDown(bottomResizer, { key: 'ArrowDown' })
+    fireEvent.keyDown(rightResizer, { key: 'ArrowLeft' })
+
+    expect(workspace.style.getPropertyValue('--left-panel-width')).toBe('276px')
+    expect(workspace.style.getPropertyValue('--bottom-panel-height')).toBe(
+      '356px',
+    )
+    expect(workspace.style.getPropertyValue('--right-panel-width')).toBe('454px')
+    expect(leftResizer).toHaveAttribute('aria-valuenow', '276')
+    expect(bottomResizer).toHaveAttribute('aria-valuenow', '356')
+    expect(rightResizer).toHaveAttribute('aria-valuenow', '454')
+  })
+
   test('adds nodes to the topology store from the Palette', () => {
     render(<App />)
 
