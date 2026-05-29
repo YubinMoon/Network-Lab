@@ -30,6 +30,7 @@ function App() {
     <main className="lab-shell">
       <header className="top-bar">
         <h1>IPv4 Network Visualization Lab</h1>
+        <SimulationControls />
       </header>
 
       <section className="workspace" aria-label="Lab Workspace">
@@ -56,7 +57,6 @@ function App() {
             </button>
           </div>
           <ExampleMenu />
-          <SimulationControls />
           <PacketGenerator />
           <PersistenceControls />
         </aside>

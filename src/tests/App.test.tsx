@@ -39,6 +39,20 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Send' })).toHaveClass(
       'packet-send-button',
     )
+
+    const topBar = screen
+      .getByRole('heading', { name: 'IPv4 Network Visualization Lab' })
+      .closest('.top-bar')
+
+    expect(topBar).not.toBeNull()
+    expect(
+      within(topBar as HTMLElement).getByLabelText('Simulation Controls'),
+    ).toBeInTheDocument()
+    expect(
+      within(screen.getByLabelText('Palette')).queryByLabelText(
+        'Simulation Controls',
+      ),
+    ).not.toBeInTheDocument()
   })
 
   test('renders Event Log as the only bottom panel view', () => {
@@ -300,11 +314,19 @@ describe('App', () => {
     const controlButtons = within(
       screen.getByLabelText('Simulation Controls'),
     ).getAllByRole('button')
+    const topBar = initialPlayButton.closest('.top-bar')
 
     expect(initialPlayButton).toHaveClass('play')
+    expect(topBar).not.toBeNull()
     expect(controlButtons.slice(0, 2).map((button) => button.textContent)).toEqual(
       ['Play', 'Reset'],
     )
+    expect(controlButtons.map((button) => button.textContent)).toContain(
+      'Clear Log',
+    )
+    expect(
+      within(topBar as HTMLElement).getByLabelText('Speed'),
+    ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument()
 
     loadDefaultGatewayExample()

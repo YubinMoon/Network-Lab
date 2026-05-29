@@ -53,7 +53,7 @@ export function SimulationControls() {
         Reset Dynamic Tables
       </button>
       <button type="button" onClick={clearSimulationTrace}>
-        Clear Event Log
+        Clear Log
       </button>
       <select
         aria-label="Speed"
