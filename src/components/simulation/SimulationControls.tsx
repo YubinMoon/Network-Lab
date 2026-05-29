@@ -47,10 +47,18 @@ export function SimulationControls() {
       >
         Reset
       </button>
-      <button type="button" onClick={previousEvent}>
+      <button
+        type="button"
+        className="simulation-step-button"
+        onClick={previousEvent}
+      >
         Previous Event
       </button>
-      <button type="button" onClick={nextEvent}>
+      <button
+        type="button"
+        className="simulation-step-button"
+        onClick={nextEvent}
+      >
         Next Event
       </button>
       <button

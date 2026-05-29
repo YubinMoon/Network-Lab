@@ -18,6 +18,7 @@ This file tracks current and planned work for the IPv4 Network Visualization Lab
 
 ## Completed Summary
 
+- 2026-05-29: Styled top title bar `Previous Event` and `Next Event` controls as blue navigation buttons, with regression tests.
 - 2026-05-29: Styled top title bar `Reset` controls as yellow warning buttons and `Clear Log` as a red destructive button, with regression tests.
 - 2026-05-29: Compressed `docs` into concise current-reference files and summarized historical TODO entries.
 - 2026-05-29: Removed `Save Local` and `Load Local`, deleted Local Storage persistence code, updated tests and docs.

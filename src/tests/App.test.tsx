@@ -381,6 +381,12 @@ describe('App', () => {
     expect(
       screen.getByRole('button', { name: 'Reset Dynamic Tables' }),
     ).toHaveClass('simulation-reset-button')
+    expect(screen.getByRole('button', { name: 'Previous Event' })).toHaveClass(
+      'simulation-step-button',
+    )
+    expect(screen.getByRole('button', { name: 'Next Event' })).toHaveClass(
+      'simulation-step-button',
+    )
     expect(screen.getByRole('button', { name: 'Clear Log' })).toHaveClass(
       'simulation-clear-button',
     )
