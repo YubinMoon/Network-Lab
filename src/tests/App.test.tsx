@@ -64,7 +64,9 @@ describe('App', () => {
       within(panel).getByRole('heading', { name: 'Event Log' }),
     ).toBeInTheDocument()
     expect(within(panel).getByLabelText('Event Log')).toBeInTheDocument()
-    expect(within(panel).queryByRole('button')).not.toBeInTheDocument()
+    expect(
+      within(panel).getByRole('button', { name: 'Clear Log' }),
+    ).toHaveClass('simulation-clear-button')
     expect(within(panel).queryByText('Packet Trace')).not.toBeInTheDocument()
     expect(
       within(panel).queryByRole('button', { name: 'Timeline' }),
@@ -390,6 +392,14 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Clear Log' })).toHaveClass(
       'simulation-clear-button',
     )
+    expect(
+      within(topBar as HTMLElement).queryByRole('button', { name: 'Clear Log' }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(screen.getByLabelText('Simulation Panel')).getByRole('button', {
+        name: 'Clear Log',
+      }),
+    ).toBeInTheDocument()
     expect(
       within(topBar as HTMLElement).getByLabelText('Speed'),
     ).toBeInTheDocument()

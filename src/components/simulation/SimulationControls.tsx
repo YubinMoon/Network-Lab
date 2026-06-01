@@ -13,7 +13,6 @@ export function SimulationControls() {
   const resetSimulation = useLabStore((state) => state.resetSimulation)
   const setSimulationSpeed = useLabStore((state) => state.setSimulationSpeed)
   const resetDynamicTables = useLabStore((state) => state.resetDynamicTables)
-  const clearSimulationTrace = useLabStore((state) => state.clearSimulationTrace)
   const isRunning = simulationStatus === 'running'
   const playbackLabel = isRunning ? 'Pause' : 'Play'
   const playbackClassName = isRunning
@@ -67,13 +66,6 @@ export function SimulationControls() {
         onClick={resetDynamicTables}
       >
         Reset Dynamic Tables
-      </button>
-      <button
-        type="button"
-        className="simulation-clear-button"
-        onClick={clearSimulationTrace}
-      >
-        Clear Log
       </button>
       <select
         aria-label="Speed"
