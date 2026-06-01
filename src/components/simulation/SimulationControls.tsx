@@ -32,6 +32,17 @@ export function SimulationControls() {
 
   return (
     <div className="simulation-controls" aria-label="Simulation Controls">
+      <select
+        aria-label="Speed"
+        value={simulationSpeed}
+        onChange={(event) => setSimulationSpeed(Number(event.target.value))}
+      >
+        {speeds.map((speed) => (
+          <option key={speed} value={speed}>
+            {speed}x
+          </option>
+        ))}
+      </select>
       <button
         type="button"
         className={playbackClassName}
@@ -67,17 +78,6 @@ export function SimulationControls() {
       >
         Reset Dynamic Tables
       </button>
-      <select
-        aria-label="Speed"
-        value={simulationSpeed}
-        onChange={(event) => setSimulationSpeed(Number(event.target.value))}
-      >
-        {speeds.map((speed) => (
-          <option key={speed} value={speed}>
-            {speed}x
-          </option>
-        ))}
-      </select>
       <span>Status: {simulationStatus}</span>
     </div>
   )

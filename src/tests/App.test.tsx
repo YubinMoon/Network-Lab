@@ -400,9 +400,10 @@ describe('App', () => {
         name: 'Clear Log',
       }),
     ).toBeInTheDocument()
-    expect(
-      within(topBar as HTMLElement).getByLabelText('Speed'),
-    ).toBeInTheDocument()
+    const speedSelect = within(topBar as HTMLElement).getByLabelText('Speed')
+
+    expect(speedSelect).toBeInTheDocument()
+    expect(initialPlayButton.previousElementSibling).toBe(speedSelect)
     expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument()
 
     loadDefaultGatewayExample()
