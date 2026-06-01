@@ -14,7 +14,7 @@ The initial implementation plan is complete. This file now records the compact m
 8. IPv4 forwarding: host send path, router decapsulation, TTL, route lookup, re-encapsulation, drops.
 9. ICMP/RAW: Echo Request/Reply and Generic IPv4 Packet payloads.
 10. UI trace: packet animation, Event Log, packet details, dynamic table highlights.
-11. Persistence: JSON import/export and compressed Share URL state.
+11. Persistence: compressed Share URL state.
 12. Examples: LAN, router forwarding, router mesh, fragmentation, failure cases.
 13. Polish/validation: unsupported L2 loop detection, reset controls, layout refinements.
 

@@ -75,5 +75,6 @@ Every drop must include an Event Log entry and drop reason.
 - Packet movement is visible on active links.
 - Inspector updates with selected node/link and current event.
 - `Routing Table`, `ARP Cache`, and `MAC Address Table` highlights match the selected event.
-- Export JSON, Import JSON, and Share URL remain available.
+- Share URL remains available.
+- Export JSON and Import JSON buttons are not present.
 - `Save Local` and `Load Local` are not present.

@@ -18,6 +18,7 @@ This file tracks current and planned work for the IPv4 Network Visualization Lab
 
 ## Completed Summary
 
+- 2026-06-01: Removed visible `Export JSON` and `Import JSON` controls from the Share panel, leaving `Share URL`.
 - 2026-05-29: Styled top title bar `Previous Event` and `Next Event` controls as blue navigation buttons, with regression tests.
 - 2026-05-29: Styled top title bar `Reset` controls as yellow warning buttons and `Clear Log` as a red destructive button, with regression tests.
 - 2026-05-29: Compressed `docs` into concise current-reference files and summarized historical TODO entries.
