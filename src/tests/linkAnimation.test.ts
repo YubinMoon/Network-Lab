@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { linkAnimationsForEvent } from '../components/canvas/linkAnimation'
 import {
   DEFAULT_LAB_SETTINGS,
+  type EthernetFrame,
   type HostNode,
   type NetworkLink,
   type NetworkNode,
@@ -17,7 +18,7 @@ describe('Link packet animation direction', () => {
       packetDeliveredEvent('host-a-eth0', 'host-b-eth0'),
     )
 
-    expect(animations.get('link-1')).toBe('source-to-target')
+    expect(animations.get('link-1')?.direction).toBe('source-to-target')
   })
 
   test('reverses the topology link direction for B to A traffic', () => {
@@ -26,7 +27,7 @@ describe('Link packet animation direction', () => {
       packetDeliveredEvent('host-b-eth0', 'host-a-eth0'),
     )
 
-    expect(animations.get('link-1')).toBe('target-to-source')
+    expect(animations.get('link-1')?.direction).toBe('target-to-source')
   })
 
   test('shows only the first physical hop when a host sends an ARP Reply through a switch', () => {
@@ -35,7 +36,7 @@ describe('Link packet animation direction', () => {
       arpReplySentEvent('host-a-eth0', 'host-b-eth0'),
     )
 
-    expect(animations.get('link-a-switch')).toBe('source-to-target')
+    expect(animations.get('link-a-switch')?.direction).toBe('source-to-target')
     expect(animations.has('link-switch-b')).toBe(false)
   })
 
@@ -45,8 +46,38 @@ describe('Link packet animation direction', () => {
       arpRequestSentEvent('host-b-eth0'),
     )
 
-    expect(animations.get('link-switch-b')).toBe('target-to-source')
+    expect(animations.get('link-switch-b')?.direction).toBe('target-to-source')
     expect(animations.has('link-a-switch')).toBe(false)
+  })
+
+  test('marks ARP frame movement with the ARP packet kind', () => {
+    const animations = linkAnimationsForEvent(
+      switchedTopology(),
+      arpRequestSentEvent('host-b-eth0', arpFrame()),
+    )
+
+    expect(animations.get('link-switch-b')?.packetKind).toBe('arp')
+  })
+
+  test('marks ICMP frame movement with the ICMP packet kind', () => {
+    const animations = linkAnimationsForEvent(
+      directTopology(),
+      packetDeliveredEvent('host-a-eth0', 'host-b-eth0', icmpFrame()),
+    )
+
+    expect(animations.get('link-1')).toEqual({
+      direction: 'source-to-target',
+      packetKind: 'icmp',
+    })
+  })
+
+  test('uses the generic IPv4 packet kind for RAW frame movement', () => {
+    const animations = linkAnimationsForEvent(
+      directTopology(),
+      packetDeliveredEvent('host-a-eth0', 'host-b-eth0', rawFrame()),
+    )
+
+    expect(animations.get('link-1')?.packetKind).toBe('generic-ipv4')
   })
 })
 
@@ -226,7 +257,10 @@ function arpReplySentEvent(
   }
 }
 
-function arpRequestSentEvent(sourceInterfaceId: string): SimulationEvent {
+function arpRequestSentEvent(
+  sourceInterfaceId: string,
+  ethernetFrame?: EthernetFrame,
+): SimulationEvent {
   return {
     id: 'event-1',
     timeMs: 0,
@@ -238,6 +272,7 @@ function arpRequestSentEvent(sourceInterfaceId: string): SimulationEvent {
     details: {
       sourceInterfaceId,
       targetIp: '10.0.1.10',
+      ...(ethernetFrame ? { ethernetFrame } : {}),
     },
   }
 }
@@ -245,6 +280,7 @@ function arpRequestSentEvent(sourceInterfaceId: string): SimulationEvent {
 function packetDeliveredEvent(
   sourceInterfaceId: string,
   deliveredInterfaceId: string,
+  ethernetFrame?: EthernetFrame,
 ): SimulationEvent {
   return {
     id: 'event-1',
@@ -257,6 +293,71 @@ function packetDeliveredEvent(
     details: {
       sourceInterfaceId,
       deliveredInterfaceId,
+      ...(ethernetFrame ? { ethernetFrame } : {}),
+    },
+  }
+}
+
+function arpFrame(): EthernetFrame {
+  return {
+    id: 'frame-arp',
+    srcMac: '02:00:00:00:00:0B',
+    dstMac: 'FF:FF:FF:FF:FF:FF',
+    etherType: 'ARP',
+    payload: {
+      operation: 'request',
+      senderIp: '10.0.1.11',
+      senderMac: '02:00:00:00:00:0B',
+      targetIp: '10.0.1.10',
+    },
+  }
+}
+
+function icmpFrame(): EthernetFrame {
+  return {
+    id: 'frame-icmp',
+    srcMac: '02:00:00:00:00:0A',
+    dstMac: '02:00:00:00:00:0B',
+    etherType: 'IPv4',
+    payload: {
+      id: 'packet-icmp',
+      identification: '0x0001',
+      srcIp: '10.0.1.10',
+      dstIp: '10.0.1.11',
+      ttl: 64,
+      protocol: 'ICMP',
+      dontFragment: false,
+      moreFragments: false,
+      fragmentOffset: 0,
+      payload: {
+        type: 'echo-request',
+        identifier: 1,
+        sequenceNumber: 1,
+        data: 'Hello',
+      },
+    },
+  }
+}
+
+function rawFrame(): EthernetFrame {
+  return {
+    id: 'frame-raw',
+    srcMac: '02:00:00:00:00:0A',
+    dstMac: '02:00:00:00:00:0B',
+    etherType: 'IPv4',
+    payload: {
+      id: 'packet-raw',
+      identification: '0x0002',
+      srcIp: '10.0.1.10',
+      dstIp: '10.0.1.11',
+      ttl: 64,
+      protocol: 'RAW',
+      dontFragment: false,
+      moreFragments: false,
+      fragmentOffset: 0,
+      payload: {
+        data: 'Hello',
+      },
     },
   }
 }

@@ -4,7 +4,9 @@ import {
   getBezierPath,
   type EdgeProps,
 } from '@xyflow/react'
+import type { CSSProperties } from 'react'
 import type { LabFlowEdge } from './flowTypes'
+import { linkPacketColor } from './packetVisuals'
 
 export function LinkEdge({
   id,
@@ -37,6 +39,13 @@ export function LinkEdge({
     data?.direction === 'target-to-source' ? reverseEdgePath : edgePath
   const edgeSelected = Boolean(selected) || Boolean(data?.selected)
   const showLabel = edgeSelected || data?.status === 'down'
+  const packetColorStyle = data?.active
+    ? ({
+        '--link-packet-color': linkPacketColor(
+          data.packetKind ?? 'generic-ipv4',
+        ),
+      } as CSSProperties)
+    : undefined
 
   return (
     <>
@@ -44,9 +53,10 @@ export function LinkEdge({
         id={id}
         path={edgePath}
         className={linkClassName(edgeSelected, Boolean(data?.active))}
+        style={packetColorStyle}
       />
       {data?.active ? (
-        <circle className="link-packet-dot" r="5">
+        <circle className="link-packet-dot" r="5" style={packetColorStyle}>
           <animateMotion dur="900ms" repeatCount="indefinite" path={animationPath} />
         </circle>
       ) : null}

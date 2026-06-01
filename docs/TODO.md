@@ -18,6 +18,7 @@ This file tracks current and planned work for the IPv4 Network Visualization Lab
 
 ## Completed Summary
 
+- 2026-06-01: Added packet-type Link movement colors for ARP, ICMP, and Generic IPv4 packets, with color readability coverage.
 - 2026-06-01: Moved the `Speed` dropdown to the left of the `Play` button, with UI regression coverage.
 - 2026-06-01: Moved `Clear Log` into the top-right of the bottom `Event Log` panel, with UI regression coverage.
 - 2026-05-29: Styled top title bar `Previous Event` and `Next Event` controls as blue navigation buttons, with regression tests.
