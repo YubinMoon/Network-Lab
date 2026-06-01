@@ -829,25 +829,26 @@ describe('App', () => {
     )
   })
 
-  test('imports the visible JSON after exporting a topology', async () => {
+  test('hides JSON import and export controls while keeping Share URL', async () => {
     render(<App />)
 
     loadDefaultGatewayExample()
-    fireEvent.click(screen.getByRole('button', { name: 'Export JSON' }))
+
+    expect(
+      screen.queryByRole('button', { name: 'Export JSON' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Import JSON' }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Share URL' }))
 
     await waitFor(() => {
-      const textArea = screen.getByLabelText('Import JSON') as HTMLTextAreaElement
+      const textArea = screen.getByLabelText('Share URL') as HTMLTextAreaElement
 
-      expect(textArea.value).toContain('Host A')
+      expect(textArea.value).toContain('#state=')
+      expect(textArea.value).toContain(window.location.origin)
     })
-
-    fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
-    expect(useLabStore.getState().topology.nodes).toHaveLength(0)
-
-    fireEvent.click(screen.getByRole('button', { name: 'Import JSON' }))
-
-    expect(useLabStore.getState().topology.nodes).toHaveLength(5)
-    expect(screen.getAllByText('Host A').length).toBeGreaterThan(0)
   })
 })
 

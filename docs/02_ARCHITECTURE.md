@@ -45,8 +45,7 @@ Switches extend L2 segments. Routers split segments. Hosts do not forward.
 
 ## Persistence
 
-- JSON export/import uses versioned topology state.
-- Share URLs use compressed hash state.
+- Share URLs use compressed, versioned topology hash state.
 - Local Storage persistence has been removed.
 
 ## Validation

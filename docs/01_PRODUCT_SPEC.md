@@ -21,7 +21,7 @@ Supported:
 - ICMP Echo Request/Reply.
 - Generic IPv4 packet with RAW payload.
 - Network Segment detection, auto IP/MAC assignment, host gateway derivation, connected routes, and `Auto Static` routes.
-- Packet animation, `Event Log`, packet detail, dynamic tables, and URL/JSON sharing.
+- Packet animation, `Event Log`, packet detail, dynamic tables, and URL sharing.
 
 Out of scope:
 
@@ -33,7 +33,7 @@ Out of scope:
 2. Let the app auto-configure addressing and routing.
 3. Send `ICMP Echo` or `Generic IPv4 Packet`.
 4. Step through events and inspect ARP Cache, MAC Address Table, Routing Table, packet headers, drops, and animation.
-5. Share the topology through JSON export/import or compressed URL state.
+5. Share the topology through compressed URL state.
 
 ## Required Example Scenarios
 

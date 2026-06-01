@@ -17,7 +17,7 @@ Net Lab 브라우저에서 네트워크 토폴로지를 만들어 패킷의 이�
 - ARP 요청/응답, `ARP Cache`, 스위치 `MAC Address Table` 변화 추적
 - `Routing Table`, `Longest Prefix Match`, `TTL` 감소 과정 확인
 - 패킷 이동 애니메이션과 `Event Log`로 처리 단계 확인
-- URL 공유, JSON 내보내기/가져오기
+- URL 공유
 
 ## 실행하기
 
