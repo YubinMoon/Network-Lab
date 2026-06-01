@@ -399,13 +399,13 @@ dd {
 }
 
 .link-edge.moving {
-  stroke: var(--active);
+  stroke: var(--link-packet-color, var(--active));
   stroke-dasharray: 8 6;
   animation: link-flow 900ms linear infinite;
 }
 
 .link-packet-dot {
-  fill: var(--active);
+  fill: var(--link-packet-color, var(--active));
   stroke: var(--surface-subtle);
   stroke-width: 2;
   pointer-events: none;

@@ -79,20 +79,25 @@ function NetworkCanvasFlow() {
   )
   const flowEdges = useMemo<LabFlowEdge[]>(
     () =>
-      topology.links.map((link) => ({
-        id: link.id,
-        source: link.endpointA.nodeId,
-        target: link.endpointB.nodeId,
-        type: 'link',
-        selected: selectedObject?.kind === 'link' && selectedObject.id === link.id,
-        data: {
-          label: 'Link',
-          status: link.status,
-          active: linkAnimations.has(link.id),
+      topology.links.map((link) => {
+        const animation = linkAnimations.get(link.id)
+
+        return {
+          id: link.id,
+          source: link.endpointA.nodeId,
+          target: link.endpointB.nodeId,
+          type: 'link',
           selected: selectedObject?.kind === 'link' && selectedObject.id === link.id,
-          direction: linkAnimations.get(link.id) ?? 'source-to-target',
-        },
-      })),
+          data: {
+            label: 'Link',
+            status: link.status,
+            active: Boolean(animation),
+            selected: selectedObject?.kind === 'link' && selectedObject.id === link.id,
+            direction: animation?.direction ?? 'source-to-target',
+            packetKind: animation?.packetKind ?? 'generic-ipv4',
+          },
+        }
+      }),
     [linkAnimations, selectedObject, topology.links],
   )
 

@@ -11,8 +11,17 @@ import {
   stringArrayDetail,
   stringDetail,
 } from '../../domain/inspectionUtils'
+import {
+  linkPacketKindForEvent,
+  type LinkPacketKind,
+} from './packetVisuals'
 
 export type LinkAnimationDirection = 'source-to-target' | 'target-to-source'
+
+export interface LinkAnimation {
+  direction: LinkAnimationDirection
+  packetKind: LinkPacketKind
+}
 
 interface AnimationContext {
   interfacesById: Map<InterfaceId, LocatedInterface>
@@ -22,14 +31,15 @@ interface AnimationContext {
 export function linkAnimationsForEvent(
   topology: TopologyState,
   event: SimulationEvent | undefined,
-): Map<LinkId, LinkAnimationDirection> {
-  const animations = new Map<LinkId, LinkAnimationDirection>()
+): Map<LinkId, LinkAnimation> {
+  const animations = new Map<LinkId, LinkAnimation>()
 
   if (!event) {
     return animations
   }
 
   const context = buildAnimationContext(topology)
+  const packetKind = linkPacketKindForEvent(event)
   const addPhysicalMovement = (
     fromInterfaceId: InterfaceId | undefined,
     toInterfaceId: InterfaceId | undefined,
@@ -44,7 +54,10 @@ export function linkAnimationsForEvent(
       return
     }
 
-    animations.set(link.id, directionForLink(link, fromInterfaceId, toInterfaceId))
+    animations.set(link.id, {
+      direction: directionForLink(link, fromInterfaceId, toInterfaceId),
+      packetKind,
+    })
   }
   const addPathMovement = (
     fromInterfaceId: InterfaceId | undefined,
