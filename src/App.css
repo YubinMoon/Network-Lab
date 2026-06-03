@@ -28,6 +28,52 @@
   white-space: nowrap;
 }
 
+.top-bar-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+}
+
+.github-repo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  max-width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 0 10px;
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.github-repo-link:hover,
+.github-repo-link:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface-hover);
+}
+
+.github-repo-link span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.github-repo-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
 .simulation-controls,
 .tool-list,
 .topology-actions {

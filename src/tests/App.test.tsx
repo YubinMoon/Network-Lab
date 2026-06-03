@@ -45,6 +45,15 @@ describe('App', () => {
       .closest('.top-bar')
 
     expect(topBar).not.toBeNull()
+    const repoLink = within(topBar as HTMLElement).getByRole('link', {
+      name: 'YubinMoon/Network-Lab',
+    })
+
+    expect(repoLink).toHaveAttribute(
+      'href',
+      'https://github.com/YubinMoon/Network-Lab',
+    )
+    expect(repoLink).toHaveAttribute('target', '_blank')
     expect(
       within(topBar as HTMLElement).getByLabelText('Simulation Controls'),
     ).toBeInTheDocument()

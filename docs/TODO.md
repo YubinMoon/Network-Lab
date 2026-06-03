@@ -18,6 +18,7 @@ This file tracks current and planned work for the IPv4 Network Visualization Lab
 
 ## Completed Summary
 
+- 2026-06-03: Added a top-left GitHub repository link to the app header.
 - 2026-06-01: Removed visible `Export JSON` and `Import JSON` controls from the Share panel, leaving `Share URL`.
 - 2026-06-01: Added packet-type Link movement colors for ARP, ICMP, and Generic IPv4 packets, with color readability coverage.
 - 2026-06-01: Moved the `Speed` dropdown to the left of the `Play` button, with UI regression coverage.
